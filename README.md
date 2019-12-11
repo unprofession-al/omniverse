@@ -66,3 +66,4 @@ Use "omniverse [command] --help" for more information about a command.
   * Does the `expression` with the `expression_template` rendered with all definitions?
 * `watch` option
 * Implement `ignore` list
+* When deducing the singularity, check if the source already has strings that match the expression
