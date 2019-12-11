@@ -37,6 +37,8 @@ func init() {
 
 	rootCmd.AddCommand(printConfigCmd)
 
+	rootCmd.AddCommand(verifyConfigCmd)
+
 	deduceSingularityCmd.Flags().StringVarP(&deduceSingularityAlterverse, "alterverse", "a", "", "name of the source alterverse (required)")
 	deduceSingularityCmd.MarkFlagRequired("alterverse")
 	deduceSingularityCmd.Flags().StringVarP(&deduceSingularitySource, "source", "s", "", "path of the source alterverse (required)")
@@ -125,7 +127,27 @@ var printConfigCmd = &cobra.Command{
 
 		b, err := yaml.Marshal(cfg)
 		exitOnErr(err)
+
 		fmt.Println(string(b))
+	},
+}
+
+var verifyConfigCmd = &cobra.Command{
+	Use:   "verify-config",
+	Short: "verify the configuration as parsed by omniverse",
+	Run: func(cmd *cobra.Command, args []string) {
+		cfg, err := NewConfig(rootConfigPath)
+		exitOnErr(err)
+
+		errs := cfg.ValidateExpressionTemplate()
+		for _, err = range errs {
+			fmt.Println(err)
+		}
+		if len(errs) == 0 {
+			fmt.Println("No errors found")
+		} else {
+			os.Exit(-1)
+		}
 	},
 }
 
