@@ -170,6 +170,8 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 	}
 
 	for path, sf := range s.files {
+		_, lb := detectLineBreak(sf.data)
+
 		if len(sf.keys) == 0 {
 			log <- fmt.Sprintf("File '%s' can be simply copied, does not contain keys...", path)
 			rendered[path] = sf.data
@@ -187,7 +189,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 				log <- fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
 			}
 			out = append(out, newLine...)
-			out = append(out, []byte("\n")...)
+			out = append(out, lb...)
 			linenum++
 		}
 

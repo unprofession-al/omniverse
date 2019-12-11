@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -186,4 +187,21 @@ func (s syncer) ReadFiles() (map[string][]byte, error) {
 	})
 
 	return out, err
+}
+
+func detectLineBreak(in []byte) (string, []byte) {
+	lb := map[string][]byte{
+		"crlf": []byte("\r\n"),
+		"lfcr": []byte("\n\r"),
+		"cr":   []byte("\r"),
+		"lf":   []byte("\n"),
+	}
+
+	for k, v := range lb {
+		if bytes.Contains(in, v) {
+			return k, v
+		}
+	}
+
+	return "unknown", lb["lf"]
 }

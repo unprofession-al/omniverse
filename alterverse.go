@@ -88,6 +88,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string, log chan st
 	}
 
 	for path, b := range a.files {
+		_, lb := detectLineBreak(b)
 		file := bytes.NewReader(b)
 
 		out := []byte{}
@@ -100,7 +101,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string, log chan st
 				log <- fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
 			}
 			out = append(out, newLine...)
-			out = append(out, []byte("\n")...)
+			out = append(out, lb...)
 			linenum++
 		}
 
