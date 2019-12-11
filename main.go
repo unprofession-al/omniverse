@@ -25,8 +25,8 @@ var (
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootConfigPath, "config", "c", "omniverse.yaml", "configuration file for omniverse")
 
-	rootCmd.PersistentFlags().BoolVarP(&rootQuiet, "quiet", "q", false, "omit log output")
-	rootCmd.PersistentFlags().StringVarP(&rootSingularityPath, "singularity", "s", "singularity", "path of the singularity")
+	rootCmd.PersistentFlags().BoolVar(&rootQuiet, "quiet", false, "omit log output")
+	rootCmd.PersistentFlags().StringVar(&rootSingularityPath, "singularity", "singularity", "path of the singularity")
 
 	createAlterverseCmd.Flags().StringVarP(&createAlterversTarget, "alterverse", "a", "", "name of the target alterverse (required)")
 	createAlterverseCmd.MarkFlagRequired("alterverse")
@@ -39,7 +39,7 @@ func init() {
 
 	deduceSingularityCmd.Flags().StringVarP(&deduceSingularityAlterverse, "alterverse", "a", "", "name of the source alterverse (required)")
 	deduceSingularityCmd.MarkFlagRequired("alterverse")
-	deduceSingularityCmd.Flags().StringVar(&deduceSingularitySource, "source", "", "path of the source alterverse (required)")
+	deduceSingularityCmd.Flags().StringVarP(&deduceSingularitySource, "source", "s", "", "path of the source alterverse (required)")
 	deduceSingularityCmd.MarkFlagRequired("source")
 	deduceSingularityCmd.Flags().BoolVar(&deduceSingularityDryRun, "dry-run", false, "only in-memory, no write to filesystem")
 	rootCmd.AddCommand(deduceSingularityCmd)
