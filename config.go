@@ -98,7 +98,7 @@ func (c config) ValidateExpressionTemplate() []error {
 				continue
 			}
 			if string(sm[0][1]) != k {
-				err := fmt.Errorf("The match group of expression '%s' not to match with key '%s' in alterverse '%s'", k, name)
+				err := fmt.Errorf("The match group of expression '%s' deos not match with key '%s' in alterverse '%s'", c.Singularity.Expression, k, name)
 				out = append(out, err)
 				continue
 			}
