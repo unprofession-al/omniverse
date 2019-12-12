@@ -59,8 +59,7 @@ var createAlterverseCmd = &cobra.Command{
 		l := NewLogger()
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(valErrs...)
-		exitOnErr(err)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 		err = s.Read(rootSingularityPath, l.Input)
@@ -99,8 +98,7 @@ var listSingularityKeysCmd = &cobra.Command{
 		l := NewLogger()
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(valErrs...)
-		exitOnErr(err)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 		err = s.Read(rootSingularityPath, l.Input)
@@ -118,8 +116,7 @@ var printConfigCmd = &cobra.Command{
 	Short: "Print the configuration as parsed by omniverse",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(valErrs...)
-		exitOnErr(err)
+		exitOnErr(append(valErrs, err)...)
 
 		b, err := yaml.Marshal(cfg)
 		exitOnErr(err)
@@ -135,8 +132,7 @@ var deduceSingularityCmd = &cobra.Command{
 		l := NewLogger()
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
-		exitOnErr(valErrs...)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 
