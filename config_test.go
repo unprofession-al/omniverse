@@ -27,9 +27,6 @@ func TestExpressionValidation(t *testing.T) {
 		// the key is dublicated in the rendered template
 		{`\<\<\W*([a-zA-Z0-9_])+\W*\>\>`, "<< {{.}}{{.}} >>", "test", true},
 
-		// the key is dublicated in the rendered template
-		{`\<\<\W*([a-zA-Z0-9_])+\W*\>\>`, "<< {{.}}foo >>", "test", true},
-
 		// the template contains too characters in addition to the string
 		// that matches the expression
 		{`\<\<\W*([a-zA-Z0-9_]+)\W*\>\>`, "<< {{.}} >>__", "test", true},
