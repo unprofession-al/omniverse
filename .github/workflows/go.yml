@@ -9,7 +9,8 @@ jobs:
 
     - name: Install Go
       uses: actions/setup-go@v1
-      with: 1.13.x
+      with:
+        go-version: 1.13.x
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
