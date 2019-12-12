@@ -58,8 +58,8 @@ var createAlterverseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
+		cfg, valErrs, err := NewConfig(rootConfigPath)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 		err = s.Read(rootSingularityPath, l.Input)
@@ -69,12 +69,7 @@ var createAlterverseCmd = &cobra.Command{
 		exitOnErr(err)
 
 		errs := s.CheckIfKeysDefined(a.Definitions())
-		for _, err = range errs {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		if len(errs) > 0 {
-			os.Exit(-1)
-		}
+		exitOnErr(errs...)
 
 		errs = s.CheckIfDefinedIsKey(a.Definitions())
 		for _, err = range errs {
@@ -102,8 +97,8 @@ var listSingularityKeysCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
+		cfg, valErrs, err := NewConfig(rootConfigPath)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 		err = s.Read(rootSingularityPath, l.Input)
@@ -120,11 +115,12 @@ var printConfigCmd = &cobra.Command{
 	Use:   "print-config",
 	Short: "Print the configuration as parsed by omniverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
+		cfg, valErrs, err := NewConfig(rootConfigPath)
+		exitOnErr(append(valErrs, err)...)
 
 		b, err := yaml.Marshal(cfg)
 		exitOnErr(err)
+
 		fmt.Println(string(b))
 	},
 }
@@ -135,8 +131,8 @@ var deduceSingularityCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
+		cfg, valErrs, err := NewConfig(rootConfigPath)
+		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
 
@@ -164,9 +160,16 @@ func main() {
 	exitOnErr(err)
 }
 
-func exitOnErr(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+func exitOnErr(errs ...error) {
+	errNotNil := false
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		errNotNil = true
+		fmt.Fprintf(os.Stderr, "ERROR: %s", err.Error())
+	}
+	if errNotNil {
 		os.Exit(-1)
 	}
 }
