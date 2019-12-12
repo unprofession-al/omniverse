@@ -21,14 +21,14 @@ type config struct {
 func NewConfig(path string) (c *config, valErrs []error, err error) {
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		err = fmt.Errorf("Error while reading config file %s: %s\n", path, err)
+		err = fmt.Errorf("Error while reading config file %s: %s", path, err)
 		return
 	}
 
 	c = &config{}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
-		err = fmt.Errorf("Error while unbarshalling config file %s: %s\n", path, err)
+		err = fmt.Errorf("Error while unbarshalling config file %s: %s", path, err)
 		return
 	}
 
