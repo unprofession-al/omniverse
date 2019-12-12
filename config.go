@@ -15,31 +15,38 @@ type config struct {
 	Alterverses alterverseConfig `yaml:"alterverses" json:"alterverses"`
 }
 
-func NewConfig(path string) (*config, error, []error) {
-	c := &config{}
-
+// NewConfig read the given yaml file and returns a config struct. It returns also
+// a slice of valiation errors (which should cause the program to quit) as well as
+// the file operation or parsing error if applicable.
+func NewConfig(path string) (c *config, valErrs []error, err error) {
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
 		err = fmt.Errorf("Error while reading config file %s: %s\n", path, err)
-		return c, err, []error{}
+		return
 	}
 
+	c = &config{}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
 		err = fmt.Errorf("Error while unbarshalling config file %s: %s\n", path, err)
-		return c, err, []error{}
+		return
 	}
 
-	errs := c.Validate()
-	return c, nil, errs
+	valErrs = c.Validate()
+	return
 }
 
+// Validate runs all various Validation tests and returns a slice of all errors
+// found.
 func (c config) Validate() []error {
 	errs := []error{}
 	errs = append(errs, c.ValidateExpressionTemplate()...)
 	return errs
 }
 
+// ValidateExpressionTemplate tests the 'expression' and the 'expression_template'
+// given in the sigularity on order to ensure that the conversion from a alterverse
+// to the singularity and vice versa delievers consistent results
 func (c config) ValidateExpressionTemplate() []error {
 	out := []error{}
 	tmpl, err := template.New("expression").Parse(c.Singularity.ExpressionTemplate)
