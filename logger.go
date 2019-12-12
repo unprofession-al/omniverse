@@ -13,6 +13,8 @@ func NewLogger() Logger {
 		Quit:  make(chan bool),
 	}
 	go func() {
+
+	Exit:
 		for {
 			select {
 			case msg := <-l.Input:
@@ -20,7 +22,7 @@ func NewLogger() Logger {
 					fmt.Printf("%s\n\n", msg)
 				}
 			case <-l.Quit:
-				break
+				break Exit
 			}
 		}
 	}()

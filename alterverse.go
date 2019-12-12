@@ -23,7 +23,7 @@ func (ac alterverseConfig) GetAlterverse(name string) (alterverse, error) {
 	a := alterverse{}
 	definitions, ok := ac[name]
 	if !ok {
-		return a, fmt.Errorf("Alterverse definitions for '%s' not found", name)
+		return a, fmt.Errorf("alterverse definitions for '%s' not found", name)
 	}
 	a.definitions = definitions
 	return a, nil

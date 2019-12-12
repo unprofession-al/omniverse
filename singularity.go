@@ -119,7 +119,7 @@ func (s *singularity) CheckIfKeysDefined(definitions map[string]string) []error 
 			for f, lines := range v {
 				files = append(files, fmt.Sprintf("%s %v", f, lines))
 			}
-			err := fmt.Errorf("Key '%s' present in singularity (files %s) but not defined in input", k, strings.Join(files, ", "))
+			err := fmt.Errorf("key '%s' present in singularity (files %s) but not defined in input", k, strings.Join(files, ", "))
 			out = append(out, err)
 		}
 	}
@@ -134,7 +134,7 @@ func (s *singularity) CheckIfDefinedIsKey(definitions map[string]string) []error
 	keys := s.GetKeys()
 	for k := range definitions {
 		if _, ok := keys[k]; !ok {
-			err := fmt.Errorf("Definition of key '%s' present but key does not exist in singularity ", k)
+			err := fmt.Errorf("definition of key '%s' present but key does not exist in singularity ", k)
 			out = append(out, err)
 		}
 	}
@@ -148,8 +148,7 @@ func (s *singularity) GetLineReplacer(definitions map[string]string) (func([]byt
 		sm := re.FindAllSubmatch(in, -1)
 		for _, match := range sm {
 			if len(match) >= 2 {
-				key := string(match[1])
-				in = bytes.Replace(in, match[0], []byte(definitions[key]), 1)
+				in = bytes.Replace(in, match[0], []byte(definitions[string(match[1])]), 1)
 				changed = true
 			}
 		}

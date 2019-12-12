@@ -31,9 +31,9 @@ func NewSyncer(basedir string, ignored []string, log chan string) (*syncer, erro
 
 	f, err := os.Stat(basedir)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Base directory '%s' does not exist", basedir)
+		return nil, fmt.Errorf("base directory '%s' does not exist", basedir)
 	} else if !f.IsDir() {
-		return nil, fmt.Errorf("Base directory '%s' seems to be a file", basedir)
+		return nil, fmt.Errorf("base directory '%s' seems to be a file", basedir)
 	} else if err != nil {
 		return nil, err
 	}
@@ -170,6 +170,10 @@ func (s syncer) ReadFiles() (map[string][]byte, error) {
 
 	out := map[string][]byte{}
 	err := filepath.Walk(s.basedir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if info.IsDir() {
 			return nil
 		}

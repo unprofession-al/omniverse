@@ -57,13 +57,13 @@ func TestExpressionValidation(t *testing.T) {
 		errs := c.ValidateExpressionTemplate()
 		hasErr := len(errs) > 0
 		if test.expectErr && !hasErr {
-			t.Errorf("An error was expected for expression '%s' and template '%s' with key '%s', but validation was ok", test.expression, test.expressionTemplate, test.definitionKey)
+			t.Errorf("an error was expected for expression '%s' and template '%s' with key '%s', but validation was ok", test.expression, test.expressionTemplate, test.definitionKey)
 		} else if !test.expectErr && hasErr {
 			errStrings := []string{}
 			for _, err := range errs {
 				errStrings = append(errStrings, err.Error())
 			}
-			t.Errorf("No error expected for expression '%s' and template '%s' with key '%s', but validation returned errors: %v", test.expression, test.expressionTemplate, test.definitionKey, strings.Join(errStrings, " AND "))
+			t.Errorf("no error expected for expression '%s' and template '%s' with key '%s', but validation returned errors: %v", test.expression, test.expressionTemplate, test.definitionKey, strings.Join(errStrings, " AND "))
 		}
 	}
 }
