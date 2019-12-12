@@ -15,18 +15,29 @@ type config struct {
 	Alterverses alterverseConfig `yaml:"alterverses" json:"alterverses"`
 }
 
-func NewConfig(path string) (*config, error) {
+func NewConfig(path string) (*config, error, []error) {
 	c := &config{}
 
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		errOut := fmt.Errorf("Error while reading config file %s: %s\n", path, err)
-		return c, errOut
+		err = fmt.Errorf("Error while reading config file %s: %s\n", path, err)
+		return c, err, []error{}
 	}
 
 	err = yaml.Unmarshal(yamlFile, c)
+	if err != nil {
+		err = fmt.Errorf("Error while unbarshalling config file %s: %s\n", path, err)
+		return c, err, []error{}
+	}
 
-	return c, nil
+	errs := c.Validate()
+	return c, nil, errs
+}
+
+func (c config) Validate() []error {
+	errs := []error{}
+	errs = append(errs, c.ValidateExpressionTemplate()...)
+	return errs
 }
 
 func (c config) ValidateExpressionTemplate() []error {

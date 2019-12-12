@@ -37,8 +37,6 @@ func init() {
 
 	rootCmd.AddCommand(printConfigCmd)
 
-	rootCmd.AddCommand(verifyConfigCmd)
-
 	deduceSingularityCmd.Flags().StringVarP(&deduceSingularityAlterverse, "alterverse", "a", "", "name of the source alterverse (required)")
 	deduceSingularityCmd.MarkFlagRequired("alterverse")
 	deduceSingularityCmd.Flags().StringVarP(&deduceSingularitySource, "source", "s", "", "path of the source alterverse (required)")
@@ -60,7 +58,8 @@ var createAlterverseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
+		cfg, err, validatienErrs := NewConfig(rootConfigPath)
+		exitOnErr(validatienErrs...)
 		exitOnErr(err)
 
 		s := &cfg.Singularity
@@ -71,12 +70,7 @@ var createAlterverseCmd = &cobra.Command{
 		exitOnErr(err)
 
 		errs := s.CheckIfKeysDefined(a.Definitions())
-		for _, err = range errs {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		if len(errs) > 0 {
-			os.Exit(-1)
-		}
+		exitOnErr(errs...)
 
 		errs = s.CheckIfDefinedIsKey(a.Definitions())
 		for _, err = range errs {
@@ -104,7 +98,8 @@ var listSingularityKeysCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
+		cfg, err, validatienErrs := NewConfig(rootConfigPath)
+		exitOnErr(validatienErrs...)
 		exitOnErr(err)
 
 		s := &cfg.Singularity
@@ -122,7 +117,8 @@ var printConfigCmd = &cobra.Command{
 	Use:   "print-config",
 	Short: "Print the configuration as parsed by omniverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := NewConfig(rootConfigPath)
+		cfg, err, validatienErrs := NewConfig(rootConfigPath)
+		exitOnErr(validatienErrs...)
 		exitOnErr(err)
 
 		b, err := yaml.Marshal(cfg)
@@ -132,33 +128,15 @@ var printConfigCmd = &cobra.Command{
 	},
 }
 
-var verifyConfigCmd = &cobra.Command{
-	Use:   "verify-config",
-	Short: "verify the configuration as parsed by omniverse",
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := NewConfig(rootConfigPath)
-		exitOnErr(err)
-
-		errs := cfg.ValidateExpressionTemplate()
-		for _, err = range errs {
-			fmt.Println(err)
-		}
-		if len(errs) == 0 {
-			fmt.Println("No errors found")
-		} else {
-			os.Exit(-1)
-		}
-	},
-}
-
 var deduceSingularityCmd = &cobra.Command{
 	Use:   "deduce-singularity",
 	Short: "Deduce singularity from alterverse",
 	Run: func(cmd *cobra.Command, args []string) {
 		l := NewLogger()
 
-		cfg, err := NewConfig(rootConfigPath)
+		cfg, err, validatienErrs := NewConfig(rootConfigPath)
 		exitOnErr(err)
+		exitOnErr(validatienErrs...)
 
 		s := &cfg.Singularity
 
@@ -186,9 +164,16 @@ func main() {
 	exitOnErr(err)
 }
 
-func exitOnErr(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+func exitOnErr(errs ...error) {
+	errNotNil := false
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		errNotNil = true
+		fmt.Fprintf(os.Stderr, "ERROR: %s", err.Error())
+	}
+	if errNotNil {
 		os.Exit(-1)
 	}
 }
