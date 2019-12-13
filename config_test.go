@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestExpressionValidation(t *testing.T) {
+func TestConfigExpressionValidation(t *testing.T) {
 	tests := []struct {
 		expression         string
 		expressionTemplate string

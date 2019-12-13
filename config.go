@@ -28,7 +28,7 @@ func NewConfig(path string) (c *config, valErrs []error, err error) {
 	c = &config{}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
-		err = fmt.Errorf("error while unbarshalling config file %s: %s", path, err)
+		err = fmt.Errorf("error while unmarshalling config file %s: %s", path, err)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (c config) ValidateExpressionTemplate() []error {
 			var expression bytes.Buffer
 			err = tmpl.Execute(&expression, k)
 			if err != nil {
-				err = fmt.Errorf("error occured while executing expression template for key '%s' in alterverse '%s': %s", k, name, err.Error())
+				err = fmt.Errorf("error occurred while executing expression template for key '%s' in alterverse '%s': %s", k, name, err.Error())
 				out = append(out, err)
 				continue
 			}

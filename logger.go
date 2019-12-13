@@ -2,13 +2,13 @@ package main
 
 import "fmt"
 
-type Logger struct {
+type logger struct {
 	Input chan string
 	Quit  chan bool
 }
 
-func NewLogger() Logger {
-	l := Logger{
+func NewLogger() logger {
+	l := logger{
 		Input: make(chan string),
 		Quit:  make(chan bool),
 	}

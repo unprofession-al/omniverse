@@ -116,7 +116,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string, log chan st
 }
 
 func (a alterverse) GetLineReplacer(expressionTemplate string) (func([]byte) ([]byte, bool), error) {
-	// Reverse definitions (k=v/v=k), sort definition values by lenght
+	// Reverse definitions (k=v/v=k), sort definition values by length
 	// This is to ensure that long strings are replaced first to avoid a
 	// potential conflict with shorter strings that are substrings of the
 	// larger string.
