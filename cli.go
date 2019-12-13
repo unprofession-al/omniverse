@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -61,13 +62,11 @@ var createAlterverseCmd = &cobra.Command{
 	Use:   "create-alterverse",
 	Short: "Create alterverse from singularity",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger(rootQuiet)
-
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath, l)
+		err = s.Read(rootSingularityPath)
 		exitOnErr(err)
 
 		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget)
@@ -78,19 +77,18 @@ var createAlterverseCmd = &cobra.Command{
 
 		errs = s.CheckIfDefinedIsKey(a.Definitions())
 		for _, err = range errs {
-			fmt.Fprintf(l, "WARNING: %s\n", err.Error())
+			log.Warn(err.Error())
 		}
 
-		rendered, err := s.Generate(rootSingularityPath, a.Definitions(), l)
+		rendered, err := s.Generate(rootSingularityPath, a.Definitions())
 		exitOnErr(err)
 
 		if !createAlterversDryRun {
-			err = a.Write(rendered, createAlterversDestination, l)
+			err = a.Write(rendered, createAlterversDestination)
 			exitOnErr(err)
 		}
 
-		fmt.Fprintf(l, "Done")
-		l.Quit()
+		log.Info("Done")
 	},
 }
 
@@ -98,20 +96,17 @@ var listSingularityKeysCmd = &cobra.Command{
 	Use:   "list-singularity-keys",
 	Short: "Discover and list keys which are defined in singularity",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger(rootQuiet)
-
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath, l)
+		err = s.Read(rootSingularityPath)
 		exitOnErr(err)
 
 		b, err := yaml.Marshal(s.GetKeys())
 		exitOnErr(err)
 
 		fmt.Println(string(b))
-		l.Quit()
 	},
 }
 
@@ -133,8 +128,6 @@ var deduceSingularityCmd = &cobra.Command{
 	Use:   "deduce-singularity",
 	Short: "Deduce singularity from alterverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger(rootQuiet)
-
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
@@ -143,19 +136,18 @@ var deduceSingularityCmd = &cobra.Command{
 		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse)
 		exitOnErr(err)
 
-		err = a.Read(deduceSingularitySource, l)
+		err = a.Read(deduceSingularitySource)
 		exitOnErr(err)
 
-		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate, l)
+		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate)
 		exitOnErr(err)
 
 		if !deduceSingularityDryRun {
-			err = s.Write(rendered, rootSingularityPath, l)
+			err = s.Write(rendered, rootSingularityPath)
 			exitOnErr(err)
 		}
 
-		fmt.Fprintf(l, "Done")
-		l.Quit()
+		log.Info("Done")
 	},
 }
 

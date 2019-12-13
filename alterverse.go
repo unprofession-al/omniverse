@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"sort"
 	"sync"
 	"text/template"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type alterverseConfig map[string]map[string]string
@@ -41,13 +42,13 @@ func (a alterverse) Definitions() map[string]string {
 	return a.definitions
 }
 
-func (a *alterverse) Read(basepath string, log io.Writer) error {
+func (a *alterverse) Read(basepath string) error {
 	a.Lock()
 	defer a.Unlock()
 
 	a.files = map[string][]byte{}
 
-	sy, err := NewSyncer(basepath, []string{}, log)
+	sy, err := NewSyncer(basepath, []string{})
 	if err != nil {
 		return err
 	}
@@ -64,12 +65,12 @@ func (a *alterverse) Read(basepath string, log io.Writer) error {
 	return nil
 }
 
-func (a alterverse) Write(files map[string][]byte, dest string, log io.Writer) error {
+func (a alterverse) Write(files map[string][]byte, dest string) error {
 	a.Lock()
 	defer a.Unlock()
 
 	ignore := []string{}
-	s, err := NewSyncer(dest, ignore, log)
+	s, err := NewSyncer(dest, ignore)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (a alterverse) Write(files map[string][]byte, dest string, log io.Writer) e
 	return s.WriteFiles(files, deleteObsolete)
 }
 
-func (a alterverse) SubstituteDefinitions(expressionTemplate string, log io.Writer) (map[string][]byte, error) {
+func (a alterverse) SubstituteDefinitions(expressionTemplate string) (map[string][]byte, error) {
 	a.RLock()
 	defer a.RUnlock()
 
@@ -99,7 +100,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string, log io.Writ
 			line := scanner.Bytes()
 			newLine, changed := lr(line)
 			if changed {
-				fmt.Fprintf(log, "Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
+				log.Info(fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine)))
 			}
 			out = append(out, newLine...)
 			out = append(out, lb...)
