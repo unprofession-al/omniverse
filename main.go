@@ -79,9 +79,7 @@ var createAlterverseCmd = &cobra.Command{
 
 		errs = s.CheckIfDefinedIsKey(a.Definitions())
 		for _, err = range errs {
-			if !rootQuiet {
-				fmt.Fprintf(os.Stderr, "WARNING: %s\n", err.Error())
-			}
+			fmt.Fprintf(l, "WARNING: %s\n", err.Error())
 		}
 
 		rendered, err := s.Generate(rootSingularityPath, a.Definitions(), l)
