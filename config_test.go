@@ -48,7 +48,7 @@ func TestConfigExpressionValidation(t *testing.T) {
 				ExpressionTemplate: test.expressionTemplate,
 			},
 			Alterverses: map[string]map[string]string{
-				"test": map[string]string{
+				"test": {
 					test.definitionKey: "does_not_matter",
 				},
 			},

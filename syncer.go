@@ -10,20 +10,24 @@ import (
 	"sync"
 )
 
-type syncer struct {
+// Syncer allows read and write from a certain directory
+type Syncer struct {
 	sync.RWMutex
 	basedir string
 	ignore  []string
 	log     chan string
 }
 
-func NewSyncer(basedir string, ignored []string, log chan string) (*syncer, error) {
+// NewSyncer takes a path to its basedir, a list of ignored files as well a
+// string channel for logging reasons. It returns a Syncer and and (if
+// adequate) an error.
+func NewSyncer(basedir string, ignored []string, log chan string) (*Syncer, error) {
 	abs, err := filepath.Abs(basedir)
 	if err != nil {
 		return nil, err
 	}
 
-	s := &syncer{
+	s := &Syncer{
 		basedir: abs,
 		ignore:  ignored,
 		log:     log,
@@ -41,7 +45,7 @@ func NewSyncer(basedir string, ignored []string, log chan string) (*syncer, erro
 	return s, nil
 }
 
-func (s syncer) listFiles() ([]string, error) {
+func (s Syncer) listFiles() ([]string, error) {
 	list := []string{}
 
 	err := filepath.Walk(s.basedir, func(path string, info os.FileInfo, err error) error {
@@ -59,7 +63,7 @@ func (s syncer) listFiles() ([]string, error) {
 	return list, err
 }
 
-func (s syncer) isIgnored(path string) bool {
+func (s Syncer) isIgnored(path string) bool {
 	out := false
 	for _, pattern := range s.ignore {
 		matched, err := filepath.Match(pattern, path)
@@ -70,7 +74,7 @@ func (s syncer) isIgnored(path string) bool {
 	return out
 }
 
-func (s syncer) deleteFiles(del []string) error {
+func (s Syncer) deleteFiles(del []string) error {
 	for _, file := range del {
 		if s.isIgnored(file) {
 			continue
@@ -85,7 +89,13 @@ func (s syncer) deleteFiles(del []string) error {
 	return nil
 }
 
-func (s syncer) WriteFiles(files map[string][]byte, del bool) error {
+// WriteFiles writes the files passed to the function as a map where
+// the keys of the map are the relative file paths, the value is the
+// actual content of the files as a byte slice.
+//
+// The del option configures if files that are absent in the map passed
+// but present on the file system should be deleted.
+func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -116,7 +126,7 @@ func (s syncer) WriteFiles(files map[string][]byte, del bool) error {
 	return nil
 }
 
-func (s syncer) writeFile(name string, data []byte) error {
+func (s Syncer) writeFile(name string, data []byte) error {
 	if s.isIgnored(name) {
 		return nil
 	}
@@ -164,7 +174,10 @@ func (s syncer) writeFile(name string, data []byte) error {
 	return nil
 }
 
-func (s syncer) ReadFiles() (map[string][]byte, error) {
+// ReadFiles returns the files in the basedir of the Syncer as a map.
+// The keys of the map are the relative file paths, the value is the
+// actual content of the files as a byte slice.
+func (s Syncer) ReadFiles() (map[string][]byte, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -193,6 +206,8 @@ func (s syncer) ReadFiles() (map[string][]byte, error) {
 	return out, err
 }
 
+// detectLineBreaks find the first occurence af a line break and returns its
+// representation
 func detectLineBreak(in []byte) (string, []byte) {
 	lb := map[string][]byte{
 		"crlf": []byte("\r\n"),
