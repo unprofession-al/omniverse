@@ -62,13 +62,13 @@ var createAlterverseCmd = &cobra.Command{
 	Use:   "create-alterverse",
 	Short: "Create alterverse from singularity",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger()
+		l := NewLogger(rootQuiet)
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath, l.Input)
+		err = s.Read(rootSingularityPath, l)
 		exitOnErr(err)
 
 		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget)
@@ -84,16 +84,16 @@ var createAlterverseCmd = &cobra.Command{
 			}
 		}
 
-		rendered, err := s.Generate(rootSingularityPath, a.Definitions(), l.Input)
+		rendered, err := s.Generate(rootSingularityPath, a.Definitions(), l)
 		exitOnErr(err)
 
 		if !createAlterversDryRun {
-			err = a.Write(rendered, createAlterversDestination, l.Input)
+			err = a.Write(rendered, createAlterversDestination, l)
 			exitOnErr(err)
 		}
 
-		l.Input <- "Done"
-		l.Quit <- true
+		fmt.Fprintf(l, "Done")
+		l.Quit()
 	},
 }
 
@@ -101,19 +101,20 @@ var listSingularityKeysCmd = &cobra.Command{
 	Use:   "list-singularity-keys",
 	Short: "Discover and list keys which are defined in singularity",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger()
+		l := NewLogger(rootQuiet)
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
 		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath, l.Input)
+		err = s.Read(rootSingularityPath, l)
 		exitOnErr(err)
 
 		b, err := yaml.Marshal(s.GetKeys())
 		exitOnErr(err)
 
 		fmt.Println(string(b))
+		l.Quit()
 	},
 }
 
@@ -135,7 +136,7 @@ var deduceSingularityCmd = &cobra.Command{
 	Use:   "deduce-singularity",
 	Short: "Deduce singularity from alterverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		l := NewLogger()
+		l := NewLogger(rootQuiet)
 
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
@@ -145,19 +146,19 @@ var deduceSingularityCmd = &cobra.Command{
 		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse)
 		exitOnErr(err)
 
-		err = a.Read(deduceSingularitySource, l.Input)
+		err = a.Read(deduceSingularitySource, l)
 		exitOnErr(err)
 
-		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate, l.Input)
+		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate, l)
 		exitOnErr(err)
 
 		if !deduceSingularityDryRun {
-			err = s.Write(rendered, rootSingularityPath, l.Input)
+			err = s.Write(rendered, rootSingularityPath, l)
 			exitOnErr(err)
 		}
 
-		l.Input <- "Done"
-		l.Quit <- true
+		fmt.Fprintf(l, "Done")
+		l.Quit()
 	},
 }
 

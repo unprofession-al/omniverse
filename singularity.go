@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"sync"
@@ -21,7 +22,7 @@ type singularityFile struct {
 	data []byte
 }
 
-func (s *singularity) Read(basepath string, log chan string) error {
+func (s *singularity) Read(basepath string, log io.Writer) error {
 	s.Lock()
 	s.files = map[string]singularityFile{}
 	// TODO: defer unlock?
@@ -48,7 +49,7 @@ func (s *singularity) Read(basepath string, log chan string) error {
 	return nil
 }
 
-func (s singularity) Write(files map[string][]byte, dest string, log chan string) error {
+func (s singularity) Write(files map[string][]byte, dest string, log io.Writer) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -158,7 +159,7 @@ func (s *singularity) GetLineReplacer(definitions map[string]string) (func([]byt
 	return out, err
 }
 
-func (s *singularity) Generate(basepath string, definitions map[string]string, log chan string) (map[string][]byte, error) {
+func (s *singularity) Generate(basepath string, definitions map[string]string, log io.Writer) (map[string][]byte, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -172,7 +173,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 		_, lb := detectLineBreak(sf.data)
 
 		if len(sf.keys) == 0 {
-			log <- fmt.Sprintf("File '%s' can be simply copied, does not contain keys...", path)
+			fmt.Fprintf(log, "File '%s' can be simply copied, does not contain keys...", path)
 			rendered[path] = sf.data
 			continue
 		}
@@ -185,7 +186,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 			line := scanner.Bytes()
 			newLine, changed := lr(line)
 			if changed {
-				log <- fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
+				fmt.Fprintf(log, "Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
 			}
 			out = append(out, newLine...)
 			out = append(out, lb...)

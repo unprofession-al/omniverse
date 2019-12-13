@@ -2,29 +2,44 @@ package main
 
 import "fmt"
 
-type logger struct {
-	Input chan string
-	Quit  chan bool
+type Logger struct {
+	input chan string
+	quit  chan bool
+	quiet bool
 }
 
-func NewLogger() logger {
-	l := logger{
-		Input: make(chan string),
-		Quit:  make(chan bool),
+func NewLogger(quiet bool) Logger {
+	l := Logger{
+		input: make(chan string),
+		quit:  make(chan bool),
+		quiet: quiet,
 	}
-	go func() {
 
-	Exit:
-		for {
-			select {
-			case msg := <-l.Input:
-				if !rootQuiet {
-					fmt.Printf("%s\n\n", msg)
-				}
-			case <-l.Quit:
-				break Exit
-			}
-		}
+	go func() {
+		l.run()
 	}()
+
 	return l
+}
+
+func (l Logger) run() {
+	for {
+		select {
+		case msg := <-l.input:
+			if !l.quiet {
+				fmt.Printf("%s\n\n", msg)
+			}
+		case <-l.quit:
+			return
+		}
+	}
+}
+
+func (l Logger) Write(p []byte) (n int, err error) {
+	l.input <- string(p)
+	return len(p), nil
+}
+
+func (l Logger) Quit() {
+	l.quit <- true
 }

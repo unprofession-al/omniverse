@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"sort"
 	"sync"
 	"text/template"
@@ -40,7 +41,7 @@ func (a alterverse) Definitions() map[string]string {
 	return a.definitions
 }
 
-func (a *alterverse) Read(basepath string, log chan string) error {
+func (a *alterverse) Read(basepath string, log io.Writer) error {
 	a.Lock()
 	defer a.Unlock()
 
@@ -63,7 +64,7 @@ func (a *alterverse) Read(basepath string, log chan string) error {
 	return nil
 }
 
-func (a alterverse) Write(files map[string][]byte, dest string, log chan string) error {
+func (a alterverse) Write(files map[string][]byte, dest string, log io.Writer) error {
 	a.Lock()
 	defer a.Unlock()
 
@@ -77,7 +78,7 @@ func (a alterverse) Write(files map[string][]byte, dest string, log chan string)
 	return s.WriteFiles(files, deleteObsolete)
 }
 
-func (a alterverse) SubstituteDefinitions(expressionTemplate string, log chan string) (map[string][]byte, error) {
+func (a alterverse) SubstituteDefinitions(expressionTemplate string, log io.Writer) (map[string][]byte, error) {
 	a.RLock()
 	defer a.RUnlock()
 
@@ -98,7 +99,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string, log chan st
 			line := scanner.Bytes()
 			newLine, changed := lr(line)
 			if changed {
-				log <- fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
+				fmt.Fprintf(log, "Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
 			}
 			out = append(out, newLine...)
 			out = append(out, lb...)
