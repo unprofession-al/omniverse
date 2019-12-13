@@ -2,12 +2,14 @@ package main
 
 import "fmt"
 
+// Logger manages printing to stdout in a central location
 type Logger struct {
 	input chan string
 	quit  chan bool
 	quiet bool
 }
 
+// NewLogger returns a logger instance
 func NewLogger(quiet bool) Logger {
 	l := Logger{
 		input: make(chan string),
@@ -35,11 +37,13 @@ func (l Logger) run() {
 	}
 }
 
+// Write implements io.Writer and prints to stdout
 func (l Logger) Write(p []byte) (n int, err error) {
 	l.input <- string(p)
 	return len(p), nil
 }
 
+// Quit ends the control loop and terminates the Logger
 func (l Logger) Quit() {
 	l.quit <- true
 }
