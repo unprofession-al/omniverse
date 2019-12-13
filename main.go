@@ -9,6 +9,10 @@ import (
 )
 
 var (
+	version string
+	commit  string
+	date    string
+
 	rootConfigPath      string
 	rootQuiet           bool
 	rootSingularityPath string
@@ -45,6 +49,8 @@ func init() {
 	rootCmd.AddCommand(deduceSingularityCmd)
 
 	rootCmd.AddCommand(listSingularityKeysCmd)
+
+	rootCmd.AddCommand(versionCmd)
 }
 
 var rootCmd = &cobra.Command{
@@ -152,6 +158,23 @@ var deduceSingularityCmd = &cobra.Command{
 
 		l.Input <- "Done"
 		l.Quit <- true
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print version info",
+	Run: func(cmd *cobra.Command, args []string) {
+		if version == "" {
+			version = "dirty"
+		}
+		if commit == "" {
+			commit = "dirty"
+		}
+		if date == "" {
+			date = "unknown"
+		}
+		fmt.Printf("Version:    %s\nCommit:     %s\nBuild Date: %s\n", version, commit, date)
 	},
 }
 
