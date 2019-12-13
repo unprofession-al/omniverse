@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"regexp"
 	"strings"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type singularity struct {
@@ -22,13 +23,13 @@ type singularityFile struct {
 	data []byte
 }
 
-func (s *singularity) Read(basepath string, log io.Writer) error {
+func (s *singularity) Read(basepath string) error {
 	s.Lock()
 	s.files = map[string]singularityFile{}
 	// TODO: defer unlock?
 	s.Unlock()
 
-	sy, err := NewSyncer(basepath, []string{}, log)
+	sy, err := NewSyncer(basepath, []string{})
 	if err != nil {
 		return err
 	}
@@ -49,12 +50,12 @@ func (s *singularity) Read(basepath string, log io.Writer) error {
 	return nil
 }
 
-func (s singularity) Write(files map[string][]byte, dest string, log io.Writer) error {
+func (s singularity) Write(files map[string][]byte, dest string) error {
 	s.Lock()
 	defer s.Unlock()
 
 	ignore := []string{}
-	sy, err := NewSyncer(dest, ignore, log)
+	sy, err := NewSyncer(dest, ignore)
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,7 @@ func (s *singularity) GetLineReplacer(definitions map[string]string) (func([]byt
 	return out, err
 }
 
-func (s *singularity) Generate(basepath string, definitions map[string]string, log io.Writer) (map[string][]byte, error) {
+func (s *singularity) Generate(basepath string, definitions map[string]string) (map[string][]byte, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -173,7 +174,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 		_, lb := detectLineBreak(sf.data)
 
 		if len(sf.keys) == 0 {
-			fmt.Fprintf(log, "File '%s' can be simply copied, does not contain keys...", path)
+			log.Info(fmt.Sprintf("File '%s' can be simply copied, does not contain keys...", path))
 			rendered[path] = sf.data
 			continue
 		}
@@ -186,7 +187,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string, l
 			line := scanner.Bytes()
 			newLine, changed := lr(line)
 			if changed {
-				fmt.Fprintf(log, "Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine))
+				log.Info(fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine)))
 			}
 			out = append(out, newLine...)
 			out = append(out, lb...)

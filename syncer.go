@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Syncer allows read and write from a certain directory
@@ -16,13 +17,12 @@ type Syncer struct {
 	sync.RWMutex
 	basedir string
 	ignore  []string
-	log     io.Writer
 }
 
 // NewSyncer takes a path to its basedir, a list of ignored files as well a
 // string channel for logging reasons. It returns a Syncer and and (if
 // adequate) an error.
-func NewSyncer(basedir string, ignored []string, log io.Writer) (*Syncer, error) {
+func NewSyncer(basedir string, ignored []string) (*Syncer, error) {
 	abs, err := filepath.Abs(basedir)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,6 @@ func NewSyncer(basedir string, ignored []string, log io.Writer) (*Syncer, error)
 	s := &Syncer{
 		basedir: abs,
 		ignore:  ignored,
-		log:     log,
 	}
 
 	f, err := os.Stat(basedir)
@@ -85,7 +84,7 @@ func (s Syncer) deleteFiles(del []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(s.log, "File '%s' deleted", path)
+		log.Info(fmt.Sprintf("File '%s' deleted", path))
 	}
 	return nil
 }
@@ -113,7 +112,7 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 			}
 		}
 		if len(obsolete) > 0 {
-			fmt.Fprintf(s.log, "The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", "))
+			log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
 			s.deleteFiles(obsolete)
 		}
 	}
@@ -133,7 +132,7 @@ func (s Syncer) writeFile(name string, data []byte) error {
 	}
 
 	path := filepath.Join(s.basedir, name)
-	fmt.Fprintf(s.log, "Writing file '%s'...", path)
+	log.Info(fmt.Sprintf("Writing file '%s'...", path))
 
 	dir := filepath.Dir(path)
 	_, err := os.Stat(dir)
