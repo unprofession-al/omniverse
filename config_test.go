@@ -42,7 +42,7 @@ func TestConfigExpressionValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c := config{
+		c := Config{
 			Singularity: singularity{
 				Expression:         test.expression,
 				ExpressionTemplate: test.expressionTemplate,

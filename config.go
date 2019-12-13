@@ -10,7 +10,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type config struct {
+// Config represents the data structure of the config file. It also
+// holds a few helper methods.
+type Config struct {
 	Singularity singularity      `yaml:"singularity" json:"singularity"`
 	Alterverses alterverseConfig `yaml:"alterverses" json:"alterverses"`
 }
@@ -18,14 +20,14 @@ type config struct {
 // NewConfig read the given yaml file and returns a config struct. It returns also
 // a slice of valiation errors (which should cause the program to quit) as well as
 // the file operation or parsing error if applicable.
-func NewConfig(path string) (c *config, valErrs []error, err error) {
+func NewConfig(path string) (c *Config, valErrs []error, err error) {
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
 		err = fmt.Errorf("error while reading config file %s: %s", path, err)
 		return
 	}
 
-	c = &config{}
+	c = &Config{}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
 		err = fmt.Errorf("error while unmarshalling config file %s: %s", path, err)
@@ -38,7 +40,7 @@ func NewConfig(path string) (c *config, valErrs []error, err error) {
 
 // Validate runs all various Validation tests and returns a slice of all errors
 // found.
-func (c config) Validate() []error {
+func (c Config) Validate() []error {
 	errs := []error{}
 	errs = append(errs, c.ValidateExpressionTemplate()...)
 	return errs
@@ -47,7 +49,7 @@ func (c config) Validate() []error {
 // ValidateExpressionTemplate tests the 'expression' and the 'expression_template'
 // given in the sigularity on order to ensure that the conversion from a alterverse
 // to the singularity and vice versa delievers consistent results
-func (c config) ValidateExpressionTemplate() []error {
+func (c Config) ValidateExpressionTemplate() []error {
 	out := []error{}
 	tmpl, err := template.New("expression").Parse(c.Singularity.ExpressionTemplate)
 	if err != nil {

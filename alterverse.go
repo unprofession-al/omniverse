@@ -121,12 +121,12 @@ func (a alterverse) GetLineReplacer(expressionTemplate string) (func([]byte) ([]
 	// potential conflict with shorter strings that are substrings of the
 	// larger string.
 	reverseDefinitions := make(map[string]string)
-	values := ByLen{}
+	values := byLen{}
 	for k, v := range a.definitions {
 		reverseDefinitions[v] = k
 		values = append(values, v)
 	}
-	sort.Sort(sort.Reverse(ByLen(values)))
+	sort.Sort(sort.Reverse(byLen(values)))
 
 	tmpl, err := template.New("expression").Parse(expressionTemplate)
 	out := func(in []byte) ([]byte, bool) {
@@ -146,16 +146,21 @@ func (a alterverse) GetLineReplacer(expressionTemplate string) (func([]byte) ([]
 	return out, err
 }
 
-type ByLen []string
+// byLen implements the sort.Interface and allows to sort an array of strings
+// by its length. See https://golang.org/pkg/sort/#Interface
+type byLen []string
 
-func (a ByLen) Len() int {
+// Len is part of the sort.Interface
+func (a byLen) Len() int {
 	return len(a)
 }
 
-func (a ByLen) Less(i, j int) bool {
+// Less is part of the sort.Interface
+func (a byLen) Less(i, j int) bool {
 	return len(a[i]) < len(a[j])
 }
 
-func (a ByLen) Swap(i, j int) {
+// Swap is part of the sort.Interface
+func (a byLen) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
