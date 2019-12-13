@@ -52,7 +52,7 @@ r>>, <<foo>> << bla >>`),
 
 		keysFound, err := s.findKeysInFile(test.file)
 		if err != nil {
-			t.Errorf("error occured while inspecting data: %s", err.Error())
+			t.Errorf("error occurred while inspecting data: %s", err.Error())
 		}
 
 		if len(keysFound) != len(test.keysExpected) {

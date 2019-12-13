@@ -207,7 +207,7 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 	return out, err
 }
 
-// detectLineBreaks find the first occurence af a line break and returns its
+// detectLineBreaks find the first occurrence af a line break and returns its
 // representation
 func detectLineBreak(in []byte) (string, []byte) {
 	lb := map[string][]byte{
