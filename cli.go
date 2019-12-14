@@ -74,7 +74,7 @@ var createAlterverseCmd = &cobra.Command{
 		s, err := NewSingularity(cfg.Singularity, sd)
 		exitOnErr(err)
 
-		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget)
+		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget, map[string][]byte{})
 		exitOnErr(err)
 
 		checker := NewChecker()
@@ -90,7 +90,12 @@ var createAlterverseCmd = &cobra.Command{
 		exitOnErr(err)
 
 		if !createAlterversDryRun {
-			err = a.Write(rendered, createAlterversDestination)
+			ignore := []string{}
+			as, err := NewSyncer(createAlterversDestination, ignore)
+			exitOnErr(err)
+
+			deleteObsolete := true
+			err = as.WriteFiles(rendered, deleteObsolete)
 			exitOnErr(err)
 		}
 
@@ -142,20 +147,34 @@ var deduceSingularityCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
+		checker := NewChecker()
+
 		s, err := NewSingularity(cfg.Singularity, map[string][]byte{})
 		exitOnErr(err)
 
-		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse)
+		ignore := []string{}
+		as, err := NewSyncer(deduceSingularitySource, ignore)
 		exitOnErr(err)
 
-		err = a.Read(deduceSingularitySource)
+		af, err := as.ReadFiles()
 		exitOnErr(err)
+
+		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse, af)
+		exitOnErr(err)
+
+		errs := checker.ValidateEqualDefinitonValues(a.Definitions())
+		exitOnErr(errs...)
 
 		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate)
 		exitOnErr(err)
 
 		if !deduceSingularityDryRun {
-			err = s.Write(rendered, rootSingularityPath)
+			ignore := []string{}
+			ss, err := NewSyncer(rootSingularityPath, ignore)
+			exitOnErr(err)
+
+			deleteObsolete := true
+			err = ss.WriteFiles(rendered, deleteObsolete)
 			exitOnErr(err)
 		}
 

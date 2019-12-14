@@ -173,3 +173,91 @@ func TestCheckerValidateSingularityIfKeysDefined(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckerValidateEqualDefinitionValues(t *testing.T) {
+	tests := []struct {
+		definitions map[string]string
+		expectErr   bool
+	}{
+		{
+			definitions: map[string]string{
+				"foo": "string1",
+				"bar": "string2",
+				"bla": "string3",
+			},
+			expectErr: false,
+		},
+		{
+			definitions: map[string]string{
+				"foo": "string1",
+				"bar": "string1",
+			},
+			expectErr: true,
+		},
+	}
+
+	c := NewChecker()
+	for _, test := range tests {
+		errs := c.ValidateEqualDefinitonValues(test.definitions)
+		hasErr := len(errs) > 0
+		if test.expectErr && !hasErr {
+			t.Errorf("errors were expected for definitions '%v', but validation was ok", test.definitions)
+		} else if !test.expectErr && hasErr {
+			t.Errorf("no errors were expected for definitions '%v', but errors occurred: %v", test.definitions, errs)
+		}
+	}
+}
+
+// func reverseStringMap(in map[string]string) map[string][]string {
+func TestReverseStringMap(t *testing.T) {
+	tests := []struct {
+		in     map[string]string
+		expect map[string][]string
+	}{
+		{
+			in: map[string]string{
+				"foo": "string1",
+				"bar": "string2",
+				"bla": "string3",
+			},
+			expect: map[string][]string{
+				"string1": []string{"foo"},
+				"string2": []string{"bar"},
+				"string3": []string{"bla"},
+			},
+		},
+		{
+			in: map[string]string{
+				"foo": "string1",
+				"bar": "string2",
+				"bla": "string1",
+			},
+			expect: map[string][]string{
+				"string1": []string{"foo", "bla"},
+				"string2": []string{"bar"},
+			},
+		},
+	}
+
+	for i, test := range tests {
+		out := reverseStringMap(test.in)
+		for k, v := range test.expect {
+			if has, ok := out[k]; ok {
+				found := 0
+				for _, key := range v {
+					for _, hasKey := range has {
+						if key == hasKey {
+							found++
+						}
+					}
+				}
+				if found != len(v) {
+					t.Errorf("test #%d: keys '%v' in not equal to '%v'", i, v, has)
+				}
+			} else {
+				t.Errorf("test #%d: key '%s' is not present in map '%v'", i, k, out)
+			}
+		}
+		// t.Errorf("map '%v' is expected but result is '%v'", test.expect, out)
+	}
+}

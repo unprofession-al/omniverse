@@ -121,3 +121,28 @@ func (c Checker) ValidateExpressionTemplate(s singularityConfig, a alterverseCon
 	c.Errs[checkName] = out
 	return out
 }
+
+func (c Checker) ValidateEqualDefinitonValues(definitions map[string]string) []error {
+	errs := []error{}
+
+	reverse := reverseStringMap(definitions)
+	for v, k := range reverse {
+		if len(k) > 1 {
+			errs = append(errs, fmt.Errorf("the keys '%s' have the same value '%s' which makes it impossible to deduce the singularity properly", strings.Join(k, ", "), v))
+		}
+	}
+
+	return errs
+}
+
+func reverseStringMap(in map[string]string) map[string][]string {
+	out := make(map[string][]string)
+	for k, v := range in {
+		if existing, ok := out[v]; ok {
+			out[v] = append(existing, k)
+		} else {
+			out[v] = []string{k}
+		}
+	}
+	return out
+}

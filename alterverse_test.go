@@ -7,7 +7,6 @@ import (
 
 func TestAlterverseLineReplacer(t *testing.T) {
 	a := alterverse{
-		name: "testing",
 		definitions: map[string]string{
 			"short": "https://www.foo.com",
 			"long":  "https://www.foo.com/bar",

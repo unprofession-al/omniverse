@@ -35,23 +35,9 @@ func NewSingularity(c singularityConfig, data map[string][]byte) (*singularity, 
 	return s, err
 }
 
-func (s singularity) Write(files map[string][]byte, dest string) error {
+func (s *singularity) Parse() error {
 	s.RLock()
 	defer s.RUnlock()
-
-	ignore := []string{}
-	sy, err := NewSyncer(dest, ignore)
-	if err != nil {
-		return err
-	}
-
-	deleteObsolete := true
-	return sy.WriteFiles(files, deleteObsolete)
-}
-
-func (s *singularity) Parse() error {
-	// s.RLock()
-	// defer s.RUnlock()
 
 	for file, data := range s.files {
 		keys, err := s.findKeysInFile(data)
