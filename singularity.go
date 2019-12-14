@@ -5,54 +5,39 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
 
+type singularityConfig struct {
+	Expression         string `yaml:"expression" json:"expression"`
+	ExpressionTemplate string `yaml:"expression_template" json:"expression_template"`
+}
+
 type singularity struct {
 	sync.RWMutex       `yaml:"-" json:"-"`
-	Expression         string                     `yaml:"expression" json:"expression"`
-	ExpressionTemplate string                     `yaml:"expression_template" json:"expression_template"`
-	files              map[string]singularityFile `yaml:"-" json:"-"`
+	Expression         string `yaml:"expression" json:"expression"`
+	ExpressionTemplate string `yaml:"expression_template" json:"expression_template"`
+
+	files map[string][]byte           `yaml:"-" json:"-"`
+	keys  map[string]map[string][]int `yaml:"-" json:"-"`
 }
 
-type singularityFile struct {
-	keys map[string][]int
-	data []byte
-}
-
-func (s *singularity) Read(basepath string) error {
-	s.Lock()
-	s.files = map[string]singularityFile{}
-	// TODO: defer unlock?
-	s.Unlock()
-
-	sy, err := NewSyncer(basepath, []string{})
-	if err != nil {
-		return err
+func NewSingularity(c singularityConfig, data map[string][]byte) (*singularity, error) {
+	s := &singularity{
+		Expression:         c.Expression,
+		ExpressionTemplate: c.ExpressionTemplate,
+		files:              data,
+		keys:               map[string]map[string][]int{},
 	}
-
-	files, err := sy.ReadFiles()
-	if err != nil {
-		return err
-	}
-
-	for file, data := range files {
-		keys, err := s.findKeysInFile(data)
-		if err != nil {
-			return err
-		}
-		s.files[file] = singularityFile{keys: keys, data: data}
-	}
-
-	return nil
+	err := s.Parse()
+	return s, err
 }
 
 func (s singularity) Write(files map[string][]byte, dest string) error {
-	s.Lock()
-	defer s.Unlock()
+	s.RLock()
+	defer s.RUnlock()
 
 	ignore := []string{}
 	sy, err := NewSyncer(dest, ignore)
@@ -62,6 +47,21 @@ func (s singularity) Write(files map[string][]byte, dest string) error {
 
 	deleteObsolete := true
 	return sy.WriteFiles(files, deleteObsolete)
+}
+
+func (s *singularity) Parse() error {
+	// s.RLock()
+	// defer s.RUnlock()
+
+	for file, data := range s.files {
+		keys, err := s.findKeysInFile(data)
+		if err != nil {
+			return err
+		}
+		s.keys[file] = keys
+	}
+
+	return nil
 }
 
 func (s *singularity) findKeysInFile(data []byte) (map[string][]int, error) {
@@ -98,8 +98,8 @@ func (s *singularity) findKeysInFile(data []byte) (map[string][]int, error) {
 
 func (s *singularity) GetKeys() map[string]map[string][]int {
 	keys := map[string]map[string][]int{}
-	for name, sf := range s.files {
-		for key, lines := range sf.keys {
+	for name := range s.files {
+		for key, lines := range s.keys[name] {
 			if _, ok := keys[key]; ok {
 				keys[key][name] = lines
 			} else {
@@ -108,39 +108,6 @@ func (s *singularity) GetKeys() map[string]map[string][]int {
 		}
 	}
 	return keys
-}
-
-func (s *singularity) CheckIfKeysDefined(definitions map[string]string) []error {
-	s.RLock()
-	defer s.RUnlock()
-
-	out := []error{}
-	for k, v := range s.GetKeys() {
-		if _, ok := definitions[k]; !ok {
-			files := []string{}
-			for f, lines := range v {
-				files = append(files, fmt.Sprintf("%s %v", f, lines))
-			}
-			err := fmt.Errorf("key '%s' present in singularity (files %s) but not defined in input", k, strings.Join(files, ", "))
-			out = append(out, err)
-		}
-	}
-	return out
-}
-
-func (s *singularity) CheckIfDefinedIsKey(definitions map[string]string) []error {
-	s.RLock()
-	defer s.RUnlock()
-
-	out := []error{}
-	keys := s.GetKeys()
-	for k := range definitions {
-		if _, ok := keys[k]; !ok {
-			err := fmt.Errorf("definition of key '%s' present but key does not exist in singularity ", k)
-			out = append(out, err)
-		}
-	}
-	return out
 }
 
 func (s *singularity) GetLineReplacer(definitions map[string]string) (func([]byte) ([]byte, bool), error) {
@@ -170,15 +137,15 @@ func (s *singularity) Generate(basepath string, definitions map[string]string) (
 		return rendered, err
 	}
 
-	for path, sf := range s.files {
-		_, lb := detectLineBreak(sf.data)
+	for path, data := range s.files {
+		_, lb := detectLineBreak(data)
 
-		if len(sf.keys) == 0 {
+		if len(s.keys[path]) == 0 {
 			log.Info(fmt.Sprintf("File '%s' can be simply copied, does not contain keys...", path))
-			rendered[path] = sf.data
+			rendered[path] = data
 			continue
 		}
-		file := bytes.NewReader(sf.data)
+		file := bytes.NewReader(data)
 
 		out := []byte{}
 		scanner := bufio.NewScanner(file)
@@ -195,7 +162,7 @@ func (s *singularity) Generate(basepath string, definitions map[string]string) (
 		}
 
 		if err := scanner.Err(); err != nil {
-			return rendered, err
+			return rendered, fmt.Errorf("failed to substitute strings in singularity file '%s', error was %s", path, err.Error())
 		}
 
 		rendered[path] = out

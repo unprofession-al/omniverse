@@ -65,17 +65,23 @@ var createAlterverseCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
-		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath)
+		ss, err := NewSyncer(rootSingularityPath, []string{})
+		exitOnErr(err)
+
+		sd, err := ss.ReadFiles()
+		exitOnErr(err)
+
+		s, err := NewSingularity(cfg.Singularity, sd)
 		exitOnErr(err)
 
 		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget)
 		exitOnErr(err)
 
-		errs := s.CheckIfKeysDefined(a.Definitions())
+		checker := NewChecker()
+		errs := checker.ValidateSingularityIfKeysDefined(*s, a.Definitions())
 		exitOnErr(errs...)
 
-		errs = s.CheckIfDefinedIsKey(a.Definitions())
+		errs = checker.ValidateDefinitionIfDefinitionsAreObsolete(a.Definitions(), *s)
 		for _, err = range errs {
 			log.Warn(err.Error())
 		}
@@ -99,8 +105,13 @@ var listSingularityKeysCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
-		s := &cfg.Singularity
-		err = s.Read(rootSingularityPath)
+		ss, err := NewSyncer(rootSingularityPath, []string{})
+		exitOnErr(err)
+
+		sd, err := ss.ReadFiles()
+		exitOnErr(err)
+
+		s, err := NewSingularity(cfg.Singularity, sd)
 		exitOnErr(err)
 
 		b, err := yaml.Marshal(s.GetKeys())
@@ -131,7 +142,8 @@ var deduceSingularityCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
-		s := &cfg.Singularity
+		s, err := NewSingularity(cfg.Singularity, map[string][]byte{})
+		exitOnErr(err)
 
 		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse)
 		exitOnErr(err)

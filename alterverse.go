@@ -108,7 +108,7 @@ func (a alterverse) SubstituteDefinitions(expressionTemplate string) (map[string
 		}
 
 		if err := scanner.Err(); err != nil {
-			return rendered, err
+			return rendered, fmt.Errorf("failed to substitute strings in altiverse file '%s', error was %s", path, err.Error())
 		}
 
 		rendered[path] = out

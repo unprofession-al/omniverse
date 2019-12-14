@@ -120,7 +120,7 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 	for name, data := range files {
 		err := s.writeFile(name, data)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed writing file '%s', error is: %s", name, err.Error())
 		}
 	}
 	return nil
@@ -184,7 +184,7 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 	out := map[string][]byte{}
 	err := filepath.Walk(s.basedir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read file '%s', error was: %s", path, err.Error())
 		}
 
 		if info.IsDir() {
@@ -193,7 +193,7 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not read file '%s', error was: %s", path, err.Error())
 		}
 
 		path = strings.TrimPrefix(path, s.basedir)
