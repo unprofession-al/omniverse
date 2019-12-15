@@ -16,6 +16,7 @@ var (
 	rootConfigPath      string
 	rootQuiet           bool
 	rootSingularityPath string
+	rootIgnore          []string
 
 	createAlterversTarget      string
 	createAlterversDestination string
@@ -31,6 +32,7 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolVar(&rootQuiet, "quiet", false, "omit log output")
 	rootCmd.PersistentFlags().StringVar(&rootSingularityPath, "singularity", "singularity", "path of the singularity")
+	rootCmd.PersistentFlags().StringSliceVar(&rootIgnore, "ignore", []string{}, "patterns to ignore")
 
 	createAlterverseCmd.Flags().StringVarP(&createAlterversTarget, "alterverse", "a", "", "name of the target alterverse (required)")
 	createAlterverseCmd.MarkFlagRequired("alterverse")
@@ -65,7 +67,7 @@ var createAlterverseCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
-		ss, err := NewSyncer(rootSingularityPath, []string{})
+		ss, err := NewSyncer(rootSingularityPath, rootIgnore)
 		exitOnErr(err)
 
 		sd, err := ss.ReadFiles()
@@ -90,8 +92,7 @@ var createAlterverseCmd = &cobra.Command{
 		exitOnErr(err)
 
 		if !createAlterversDryRun {
-			ignore := []string{}
-			as, err := NewSyncer(createAlterversDestination, ignore)
+			as, err := NewSyncer(createAlterversDestination, rootIgnore)
 			exitOnErr(err)
 
 			deleteObsolete := true
@@ -110,7 +111,7 @@ var listSingularityKeysCmd = &cobra.Command{
 		cfg, valErrs, err := NewConfig(rootConfigPath)
 		exitOnErr(append(valErrs, err)...)
 
-		ss, err := NewSyncer(rootSingularityPath, []string{})
+		ss, err := NewSyncer(rootSingularityPath, rootIgnore)
 		exitOnErr(err)
 
 		sd, err := ss.ReadFiles()
@@ -152,25 +153,27 @@ var deduceSingularityCmd = &cobra.Command{
 		s, err := NewSingularity(cfg.Singularity, map[string][]byte{})
 		exitOnErr(err)
 
-		ignore := []string{}
-		as, err := NewSyncer(deduceSingularitySource, ignore)
+		fmt.Println(rootIgnore)
+		as, err := NewSyncer(deduceSingularitySource, rootIgnore)
 		exitOnErr(err)
 
 		af, err := as.ReadFiles()
 		exitOnErr(err)
 
+		errs := checker.ExpressionHasMatches(s.Expression, af)
+		exitOnErr(err)
+
 		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse, af)
 		exitOnErr(err)
 
-		errs := checker.ValidateEqualDefinitonValues(a.Definitions())
+		errs = checker.ValidateEqualDefinitonValues(a.Definitions())
 		exitOnErr(errs...)
 
 		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate)
 		exitOnErr(err)
 
 		if !deduceSingularityDryRun {
-			ignore := []string{}
-			ss, err := NewSyncer(rootSingularityPath, ignore)
+			ss, err := NewSyncer(rootSingularityPath, rootIgnore)
 			exitOnErr(err)
 
 			deleteObsolete := true

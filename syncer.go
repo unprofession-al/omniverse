@@ -64,14 +64,13 @@ func (s Syncer) listFiles() ([]string, error) {
 }
 
 func (s Syncer) isIgnored(path string) bool {
-	out := false
 	for _, pattern := range s.ignore {
-		matched, err := filepath.Match(pattern, path)
-		if matched || err != nil {
-			out = true
+		matched := strings.Contains(path, pattern)
+		if matched {
+			return true
 		}
 	}
-	return out
+	return false
 }
 
 func (s Syncer) deleteFiles(del []string) error {
@@ -187,7 +186,7 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 			return fmt.Errorf("could not read file '%s', error was: %s", path, err.Error())
 		}
 
-		if info.IsDir() {
+		if info.IsDir() || s.isIgnored(path) {
 			return nil
 		}
 
