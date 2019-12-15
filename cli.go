@@ -161,7 +161,7 @@ var deduceSingularityCmd = &cobra.Command{
 		exitOnErr(err)
 
 		errs := checker.ExpressionHasMatches(s.Expression, af)
-		exitOnErr(err)
+		exitOnErr(errs)
 
 		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse, af)
 		exitOnErr(err)
