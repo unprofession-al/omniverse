@@ -122,7 +122,10 @@ func (c Checker) ValidateExpressionTemplate(s singularityConfig, a alterverseCon
 	return out
 }
 
+// ValitateEqualDefinitionValues checks some definitions have equal values strings. If this is true it is
+// impossible to deduce the singularity properly
 func (c Checker) ValidateEqualDefinitonValues(definitions map[string]string) []error {
+	checkName := "Validate if Values of Definitions are equal"
 	errs := []error{}
 
 	reverse := reverseStringMap(definitions)
@@ -132,6 +135,7 @@ func (c Checker) ValidateEqualDefinitonValues(definitions map[string]string) []e
 		}
 	}
 
+	c.Errs[checkName] = errs
 	return errs
 }
 
@@ -145,4 +149,27 @@ func reverseStringMap(in map[string]string) map[string][]string {
 		}
 	}
 	return out
+}
+
+// ExpressionHasMatches checks if the files passed have matches. This should be checked when deducing the
+// singularity. If true this will lead to confusing results.
+func (c Checker) ExpressionHasMatches(expression string, files map[string][]byte) []error {
+	checkName := "Validate if files contain strings that match the expression"
+	errs := []error{}
+
+	re, err := regexp.Compile(expression)
+	if err != nil {
+		errs = append(errs, err)
+		c.Errs[checkName] = errs
+		return errs
+	}
+
+	for name, file := range files {
+		hasMatch := re.Match(file)
+		if hasMatch {
+			errs = append(errs, fmt.Errorf("file '%s' contains strings that match the expression '%s'", name, expression))
+		}
+	}
+
+	return errs
 }

@@ -208,7 +208,6 @@ func TestCheckerValidateEqualDefinitionValues(t *testing.T) {
 	}
 }
 
-// func reverseStringMap(in map[string]string) map[string][]string {
 func TestReverseStringMap(t *testing.T) {
 	tests := []struct {
 		in     map[string]string
@@ -258,6 +257,31 @@ func TestReverseStringMap(t *testing.T) {
 				t.Errorf("test #%d: key '%s' is not present in map '%v'", i, k, out)
 			}
 		}
-		// t.Errorf("map '%v' is expected but result is '%v'", test.expect, out)
+	}
+}
+
+func TestHasMatches(t *testing.T) {
+	expression := `\<\<\W*([a-zA-Z0-9_]+)\W*\>\>`
+
+	tests := []struct {
+		files           map[string][]byte
+		matchesExpected int
+	}{
+		{
+			files: map[string][]byte{
+				"foo/bar": []byte("string1 <foo> <bar>> bla << foo > bar<< bla>"),
+				"foo/bla": []byte("string1 <foo> <bar>> bla << foo >> bar<< bla>"),
+				"foo/foo": []byte("string1 <<foo>> <bar>> bla << foo >> bar<< bla>"),
+			},
+			matchesExpected: 2,
+		},
+	}
+
+	c := NewChecker()
+	for i, test := range tests {
+		errs := c.ExpressionHasMatches(expression, test.files)
+		if len(errs) != test.matchesExpected {
+			t.Errorf("test #%d: %d matches were expected, found %d.", i, test.matchesExpected, len(errs))
+		}
 	}
 }
