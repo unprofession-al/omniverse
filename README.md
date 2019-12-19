@@ -12,9 +12,9 @@ and put the binary file somewhere in your `$PATH`
 
 ### From Source
 
-Make sure you have [go](https://golang.org/doc/install) installed, then run: 
+Make sure you have [go](https://golang.org/doc/install) installed, then run:
 
-```
+```bash
 # go get -u https://github.com/unprofession-al/omniverse
 ```
 
@@ -38,7 +38,7 @@ alterverses:
 ## Run
 
 ```bash
-# omniverse                                         
+# omniverse
 Create a copy of a directory with deviations
 
 Usage:
@@ -62,7 +62,7 @@ Use "omniverse [command] --help" for more information about a command.
 
 ## Next up
 
-* Better validation of the configuration: 
+* Better validation of the configuration:
   * Does the `expression` with the `expression_template` rendered with all definitions?
 * `watch` option
 * Implement `ignore` list
