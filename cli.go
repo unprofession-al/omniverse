@@ -3,56 +3,26 @@ package main
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 var (
-	version string
-	commit  string
-	date    string
-
-	rootConfigPath      string
-	rootQuiet           bool
-	rootSingularityPath string
-	rootIgnore          []string
-
-	createAlterversTarget      string
-	createAlterversDestination string
-	createAlterversDryRun      bool
-
-	deduceSingularityAlterverse string
-	deduceSingularitySource     string
-	deduceSingularityDryRun     bool
+	deduceAlterverseFrom   string
+	deduceAlterverseTo     string
+	deduceAlterverseIgnore []string
+	deduceAlterverseDryRun bool
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&rootConfigPath, "config", "c", "omniverse.yaml", "configuration file for omniverse")
-
-	rootCmd.PersistentFlags().BoolVar(&rootQuiet, "quiet", false, "omit log output")
-	rootCmd.PersistentFlags().StringVar(&rootSingularityPath, "singularity", "singularity", "path of the singularity")
-	rootCmd.PersistentFlags().StringSliceVar(&rootIgnore, "ignore", []string{}, "patterns to ignore")
-
-	createAlterverseCmd.Flags().StringVarP(&createAlterversTarget, "alterverse", "a", "", "name of the target alterverse (required)")
-	createAlterverseCmd.MarkFlagRequired("alterverse")
-	createAlterverseCmd.Flags().StringVarP(&createAlterversDestination, "destination", "d", "", "destination folder of the alterverse")
-	createAlterverseCmd.MarkFlagRequired("destination")
-	createAlterverseCmd.Flags().BoolVar(&createAlterversDryRun, "dry-run", false, "only in-memory, no write to filesystem")
-	rootCmd.AddCommand(createAlterverseCmd)
-
-	rootCmd.AddCommand(printConfigCmd)
-
-	deduceSingularityCmd.Flags().StringVarP(&deduceSingularityAlterverse, "alterverse", "a", "", "name of the source alterverse (required)")
-	deduceSingularityCmd.MarkFlagRequired("alterverse")
-	deduceSingularityCmd.Flags().StringVarP(&deduceSingularitySource, "source", "s", "", "path of the source alterverse (required)")
-	deduceSingularityCmd.MarkFlagRequired("source")
-	deduceSingularityCmd.Flags().BoolVar(&deduceSingularityDryRun, "dry-run", false, "only in-memory, no write to filesystem")
-	rootCmd.AddCommand(deduceSingularityCmd)
-
-	rootCmd.AddCommand(listSingularityKeysCmd)
-
 	rootCmd.AddCommand(versionCmd)
+
+	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseFrom, "from", "f", "", "source alterverse path")
+	deduceAlterverseCmd.MarkFlagRequired("from")
+	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseTo, "to", "t", "", "destination alterverse path")
+	deduceAlterverseCmd.MarkFlagRequired("to")
+	deduceAlterverseCmd.Flags().StringSliceVarP(&deduceAlterverseIgnore, "ignore", "i", []string{`/.`, `\.`, `.git`, alterverseFile}, "patterns to ignore")
+	deduceAlterverseCmd.Flags().BoolVar(&deduceAlterverseDryRun, "dry-run", false, "only in-memory, no write to filesystem")
+	rootCmd.AddCommand(deduceAlterverseCmd)
 }
 
 var rootCmd = &cobra.Command{
@@ -60,128 +30,31 @@ var rootCmd = &cobra.Command{
 	Short: "Create a copy of a directory with deviations",
 }
 
-var createAlterverseCmd = &cobra.Command{
-	Use:   "create-alterverse",
-	Short: "Create alterverse from singularity",
+var deduceAlterverseCmd = &cobra.Command{
+	Use:   "deduce-alterverse",
+	Short: "Deduce an alterverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(append(valErrs, err)...)
-
-		ss, err := NewSyncer(rootSingularityPath, rootIgnore)
-		exitOnErr(err)
-
-		sd, err := ss.ReadFiles()
-		exitOnErr(err)
-
-		s, err := NewSingularity(cfg.Singularity, sd)
-		exitOnErr(err)
-
-		a, err := cfg.Alterverses.GetAlterverse(createAlterversTarget, map[string][]byte{})
-		exitOnErr(err)
-
-		checker := NewChecker()
-		errs := checker.ValidateSingularityIfKeysDefined(*s, a.Definitions())
+		from, errs := NewAlterverse(deduceAlterverseFrom)
 		exitOnErr(errs...)
-
-		errs = checker.ValidateDefinitionIfDefinitionsAreObsolete(a.Definitions(), *s)
-		for _, err = range errs {
-			log.Warn(err.Error())
-		}
-
-		rendered, err := s.Generate(rootSingularityPath, a.Definitions())
+		fromSyncer, err := NewSyncer(deduceAlterverseFrom, deduceAlterverseIgnore)
+		exitOnErr(err)
+		fromData, err := fromSyncer.ReadFiles()
 		exitOnErr(err)
 
-		if !createAlterversDryRun {
-			as, err := NewSyncer(createAlterversDestination, rootIgnore)
-			exitOnErr(err)
+		to, errs := NewAlterverse(deduceAlterverseTo)
+		exitOnErr(errs...)
+		toSyncer, err := NewSyncer(deduceAlterverseTo, deduceAlterverseIgnore)
+		exitOnErr(err)
 
-			deleteObsolete := true
-			err = as.WriteFiles(rendered, deleteObsolete)
+		transverse, err := NewTransverse(from.Manifest, to.Manifest)
+		exitOnErr(err)
+		toData := transverse.Do(fromData)
+
+		if !deduceAlterverseDryRun {
+			deleteObselete := true
+			err = toSyncer.WriteFiles(toData, deleteObselete)
 			exitOnErr(err)
 		}
-
-		log.Info("Done")
-	},
-}
-
-var listSingularityKeysCmd = &cobra.Command{
-	Use:   "list-singularity-keys",
-	Short: "Discover and list keys which are defined in singularity",
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(append(valErrs, err)...)
-
-		ss, err := NewSyncer(rootSingularityPath, rootIgnore)
-		exitOnErr(err)
-
-		sd, err := ss.ReadFiles()
-		exitOnErr(err)
-
-		s, err := NewSingularity(cfg.Singularity, sd)
-		exitOnErr(err)
-
-		b, err := yaml.Marshal(s.GetKeys())
-		exitOnErr(err)
-
-		fmt.Println(string(b))
-	},
-}
-
-var printConfigCmd = &cobra.Command{
-	Use:   "print-config",
-	Short: "Print the configuration as parsed by omniverse",
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(append(valErrs, err)...)
-
-		b, err := yaml.Marshal(cfg)
-		exitOnErr(err)
-
-		fmt.Println(string(b))
-	},
-}
-
-var deduceSingularityCmd = &cobra.Command{
-	Use:   "deduce-singularity",
-	Short: "Deduce singularity from alterverse",
-	Run: func(cmd *cobra.Command, args []string) {
-		cfg, valErrs, err := NewConfig(rootConfigPath)
-		exitOnErr(append(valErrs, err)...)
-
-		checker := NewChecker()
-
-		s, err := NewSingularity(cfg.Singularity, map[string][]byte{})
-		exitOnErr(err)
-
-		fmt.Println(rootIgnore)
-		as, err := NewSyncer(deduceSingularitySource, rootIgnore)
-		exitOnErr(err)
-
-		af, err := as.ReadFiles()
-		exitOnErr(err)
-
-		errs := checker.ExpressionHasMatches(s.Expression, af)
-		exitOnErr(errs...)
-
-		a, err := cfg.Alterverses.GetAlterverse(deduceSingularityAlterverse, af)
-		exitOnErr(err)
-
-		errs = checker.ValidateEqualDefinitonValues(a.Definitions())
-		exitOnErr(errs...)
-
-		rendered, err := a.SubstituteDefinitions(s.ExpressionTemplate)
-		exitOnErr(err)
-
-		if !deduceSingularityDryRun {
-			ss, err := NewSyncer(rootSingularityPath, rootIgnore)
-			exitOnErr(err)
-
-			deleteObsolete := true
-			err = ss.WriteFiles(rendered, deleteObsolete)
-			exitOnErr(err)
-		}
-
-		log.Info("Done")
 	},
 }
 
@@ -189,15 +62,6 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version info",
 	Run: func(cmd *cobra.Command, args []string) {
-		if version == "" {
-			version = "dirty"
-		}
-		if commit == "" {
-			commit = "dirty"
-		}
-		if date == "" {
-			date = "unknown"
-		}
-		fmt.Printf("Version:    %s\nCommit:     %s\nBuild Date: %s\n", version, commit, date)
+		fmt.Println(versionInfo())
 	},
 }

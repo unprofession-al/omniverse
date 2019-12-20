@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Syncer allows read and write from a certain directory
@@ -83,7 +81,7 @@ func (s Syncer) deleteFiles(del []string) error {
 		if err != nil {
 			return err
 		}
-		log.Info(fmt.Sprintf("File '%s' deleted", path))
+		//log.Info(fmt.Sprintf("File '%s' deleted", path))
 	}
 	return nil
 }
@@ -111,7 +109,7 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 			}
 		}
 		if len(obsolete) > 0 {
-			log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
+			//log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
 			s.deleteFiles(obsolete)
 		}
 	}
@@ -131,7 +129,7 @@ func (s Syncer) writeFile(name string, data []byte) error {
 	}
 
 	path := filepath.Join(s.basedir, name)
-	log.Info(fmt.Sprintf("Writing file '%s'...", path))
+	//log.Info(fmt.Sprintf("Writing file '%s'...", path))
 
 	dir := filepath.Dir(path)
 	_, err := os.Stat(dir)
