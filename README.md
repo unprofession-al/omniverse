@@ -61,7 +61,7 @@ manifest:
 
 An arbitrary file present the source folder with the content of...
 
-```
+```terraform
 resource "aws_lb" "production" {
   name               = "production_lb"
   internal           = false
@@ -77,7 +77,7 @@ resource "aws_lb" "production" {
 
 ... would be rendered to the destination directory with the content of...
 
-```
+```terraform
 resource "aws_lb" "test" {
   name               = "test_lb"
   internal           = false
