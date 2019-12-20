@@ -82,7 +82,7 @@ func NewLookupTable(from, to map[string]string) (LookupTable, error) {
 // return value.
 func haveSameKeys(a, b map[string]string) (bool, []string) {
 	missing := []string{}
-	for k, _ := range a {
+	for k := range a {
 		if _, ok := b[k]; !ok {
 			missing = append(missing, k)
 		}

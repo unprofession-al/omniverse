@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -201,23 +200,4 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 	})
 
 	return out, err
-}
-
-// detectLineBreaks find the first occurrence af a line break and returns its
-// representation
-func detectLineBreak(in []byte) (string, []byte) {
-	lb := map[string][]byte{
-		"crlf": []byte("\r\n"),
-		"lfcr": []byte("\n\r"),
-		"cr":   []byte("\r"),
-		"lf":   []byte("\n"),
-	}
-
-	for k, v := range lb {
-		if bytes.Contains(in, v) {
-			return k, v
-		}
-	}
-
-	return "unknown", lb["lf"]
 }
