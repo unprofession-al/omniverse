@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,15 +12,29 @@ import (
 
 const alterverseFile = ".alterverse.yml"
 
+// Manifest contains a map of identifiers to thir values.
 type Manifest map[string]string
 
+// Alterverse contains specific information per alterverse.
 type Alterverse struct {
 	Manifest Manifest `json:"manifest" yaml:"manifest"`
 	location string   `json:"location" yaml:"location"`
 }
 
+// NewAlterverse takes a path to a dicectory, reads the manifest file,
+// performes necessary checks and returnes the alterverse.
 func NewAlterverse(location string) (*Alterverse, []error) {
 	a := &Alterverse{location: location}
+
+	li, err := os.Stat(location)
+	if err != nil {
+		err = fmt.Errorf("error while checking location '%s': %s", location, err)
+		return a, []error{err}
+	}
+	if !li.IsDir() {
+		err = fmt.Errorf("location '%s' does not seem to be a directory", location)
+		return a, []error{err}
+	}
 
 	manifestPath := filepath.Join(location, alterverseFile)
 	manifestFile, err := ioutil.ReadFile(manifestPath)
@@ -53,6 +68,9 @@ func (a Alterverse) HasValueDublicates() []error {
 	return errs
 }
 
+// reverseStringMap switches the keys and values of a map. Since values (of the input)
+// can be duplicated (different keys have the same value) the values of the map returned
+// is a list of all the keys (of the input map) with this particular value.
 func reverseStringMap(in map[string]string) map[string][]string {
 	out := make(map[string][]string)
 	for k, v := range in {

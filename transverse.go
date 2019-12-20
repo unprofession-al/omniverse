@@ -9,18 +9,28 @@ import (
 	"github.com/rs/xid"
 )
 
+// Transverse holds all data and logic to convert the data from
+// one alterverse to anotherp.
 type Transverse struct {
-	lt LookupTable
+	lt lookupTable
 }
 
+// NewTransverse takes two manifests, builds a lookup table, sorts
+// this table (long values of the 'source' alterverse must come first
+// to ensure proper string substitution) and returns a ready to use
+// Transverse
 func NewTransverse(from, to Manifest) (*Transverse, error) {
 	i := &Transverse{}
-	lt, err := NewLookupTable(from, to)
+	lt, err := newLookupTable(from, to)
 	sort.Sort(sort.Reverse(lt))
 	i.lt = lt
 	return i, err
 }
 
+// Do performs the actuall string substitution using the lookup table.
+// To ensure no faulty substitutions occure every required value from the
+// source is replaced with a generated key/id of a fixed length which in
+// guarantied to be unique.
 func (t Transverse) Do(in map[string][]byte) map[string][]byte {
 	intermediate := map[string][]byte{}
 	for k, v := range in {
@@ -48,24 +58,24 @@ func (t Transverse) Do(in map[string][]byte) map[string][]byte {
 	return out
 }
 
-type LookupRecord struct {
+type lookupRecord struct {
 	From string
 	To   string
 	Key  string
 	Name string
 }
 
-type LookupTable []*LookupRecord
+type lookupTable []*lookupRecord
 
-func NewLookupTable(from, to map[string]string) (LookupTable, error) {
-	lt := []*LookupRecord{}
+func newLookupTable(from, to map[string]string) (lookupTable, error) {
+	lt := []*lookupRecord{}
 
 	if ok, missing := haveSameKeys(from, to); !ok {
-		return LookupTable(lt), fmt.Errorf("the following keys are missing: %s", strings.Join(missing, ", "))
+		return lookupTable(lt), fmt.Errorf("the following keys are missing: %s", strings.Join(missing, ", "))
 	}
 
 	for k, v := range from {
-		lr := &LookupRecord{
+		lr := &lookupRecord{
 			From: v,
 			To:   to[k],
 			Key:  xid.New().String(),
@@ -74,7 +84,7 @@ func NewLookupTable(from, to map[string]string) (LookupTable, error) {
 		lt = append(lt, lr)
 	}
 
-	return LookupTable(lt), nil
+	return lookupTable(lt), nil
 }
 
 // haveSameKeys checks two maps a and b if all keys present in a are also
@@ -93,6 +103,6 @@ func haveSameKeys(a, b map[string]string) (bool, []string) {
 	return true, missing
 }
 
-func (lt LookupTable) Len() int           { return len(lt) }
-func (lt LookupTable) Less(i, j int) bool { return len(lt[i].From) < len(lt[j].From) }
-func (lt LookupTable) Swap(i, j int)      { lt[i], lt[j] = lt[j], lt[i] }
+func (lt lookupTable) Len() int           { return len(lt) }
+func (lt lookupTable) Less(i, j int) bool { return len(lt[i].From) < len(lt[j].From) }
+func (lt lookupTable) Swap(i, j int)      { lt[i], lt[j] = lt[j], lt[i] }
