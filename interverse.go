@@ -9,18 +9,18 @@ import (
 	"github.com/rs/xid"
 )
 
-// Transverse holds all data and logic to convert the data from
+// Interverse holds all data and logic to convert the data from
 // one alterverse to anotherp.
-type Transverse struct {
+type Interverse struct {
 	lt lookupTable
 }
 
-// NewTransverse takes two manifests, builds a lookup table, sorts
+// NewInterverse takes two manifests, builds a lookup table, sorts
 // this table (long values of the 'source' alterverse must come first
 // to ensure proper string substitution) and returns a ready to use
-// Transverse
-func NewTransverse(from, to Manifest) (*Transverse, error) {
-	i := &Transverse{}
+// Interverse
+func NewInterverse(from, to Manifest) (*Interverse, error) {
+	i := &Interverse{}
 	lt, err := newLookupTable(from, to)
 	sort.Sort(sort.Reverse(lt))
 	i.lt = lt
@@ -31,7 +31,7 @@ func NewTransverse(from, to Manifest) (*Transverse, error) {
 // To ensure no faulty substitutions occure every required value from the
 // source is replaced with a generated key/id of a fixed length which in
 // guarantied to be unique.
-func (t Transverse) Do(in map[string][]byte) map[string][]byte {
+func (t Interverse) Do(in map[string][]byte) map[string][]byte {
 	intermediate := map[string][]byte{}
 	for k, v := range in {
 		data := v

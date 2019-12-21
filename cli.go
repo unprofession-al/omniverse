@@ -46,9 +46,9 @@ var deduceAlterverseCmd = &cobra.Command{
 		toSyncer, err := NewSyncer(deduceAlterverseTo, deduceAlterverseIgnore)
 		exitOnErr(err)
 
-		transverse, err := NewTransverse(from.Manifest, to.Manifest)
+		interverse, err := NewInterverse(from.Manifest, to.Manifest)
 		exitOnErr(err)
-		toData := transverse.Do(fromData)
+		toData := interverse.Do(fromData)
 
 		if !deduceAlterverseDryRun {
 			deleteObselete := true
