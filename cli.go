@@ -9,9 +9,11 @@ import (
 var (
 	deduceAlterverseFrom   string
 	deduceAlterverseTo     string
-	deduceAlterverseIgnore []string
+	deduceAlterverseIgnore string
 	deduceAlterverseDryRun bool
 )
+
+const defaultIgrore = `^.*[\\/]\..*|^\..*`
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
@@ -20,7 +22,7 @@ func init() {
 	deduceAlterverseCmd.MarkFlagRequired("from")
 	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseTo, "to", "t", "", "destination alterverse path")
 	deduceAlterverseCmd.MarkFlagRequired("to")
-	deduceAlterverseCmd.Flags().StringSliceVarP(&deduceAlterverseIgnore, "ignore", "i", []string{`/.`, `\.`, `.git`, alterverseFile}, "patterns to ignore")
+	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseIgnore, "ignore", "i", defaultIgrore, "if a filename matches this regexp it is ignored")
 	deduceAlterverseCmd.Flags().BoolVar(&deduceAlterverseDryRun, "dry-run", false, "only in-memory, no write to filesystem")
 	rootCmd.AddCommand(deduceAlterverseCmd)
 }

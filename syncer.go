@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -13,30 +14,34 @@ import (
 type Syncer struct {
 	sync.RWMutex
 	basedir string
-	ignore  []string
+	ignore  *regexp.Regexp
 }
 
 // NewSyncer takes a path to its basedir, a list of ignored files as well a
 // string channel for logging reasons. It returns a Syncer and and (if
 // adequate) an error.
-func NewSyncer(basedir string, ignored []string) (*Syncer, error) {
+func NewSyncer(basedir string, ignored string) (*Syncer, error) {
 	abs, err := filepath.Abs(basedir)
 	if err != nil {
 		return nil, err
 	}
-
-	s := &Syncer{
-		basedir: abs,
-		ignore:  ignored,
-	}
-
-	f, err := os.Stat(basedir)
+	f, err := os.Stat(abs)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("base directory '%s' does not exist", basedir)
 	} else if !f.IsDir() {
 		return nil, fmt.Errorf("base directory '%s' seems to be a file", basedir)
 	} else if err != nil {
 		return nil, err
+	}
+
+	re, err := regexp.Compile(ignored)
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Syncer{
+		basedir: abs,
+		ignore:  re,
 	}
 
 	return s, nil
@@ -61,13 +66,7 @@ func (s Syncer) listFiles() ([]string, error) {
 }
 
 func (s Syncer) isIgnored(path string) bool {
-	for _, pattern := range s.ignore {
-		matched := strings.Contains(path, pattern)
-		if matched {
-			return true
-		}
-	}
-	return false
+	return s.ignore.MatchString(path)
 }
 
 func (s Syncer) deleteFiles(del []string) error {
@@ -96,17 +95,11 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 	defer s.Unlock()
 
 	if del {
-		list, err := s.listFiles()
+		obsolete, err := s.findObsolete(files)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed looking for obsolete files in '%s', error is: %s", s.basedir, err.Error())
 		}
 
-		obsolete := []string{}
-		for _, f := range list {
-			if _, ok := files[f]; !ok {
-				obsolete = append(obsolete, f)
-			}
-		}
 		if len(obsolete) > 0 {
 			//log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
 			s.deleteFiles(obsolete)
@@ -120,6 +113,23 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 		}
 	}
 	return nil
+}
+
+func (s Syncer) findObsolete(shouldHaveFile map[string][]byte) ([]string, error) {
+	obsolete := []string{}
+
+	haveFiles, err := s.listFiles()
+	if err != nil {
+		return obsolete, err
+	}
+
+	for _, f := range haveFiles {
+		if _, ok := shouldHaveFile[f]; !ok {
+			obsolete = append(obsolete, f)
+		}
+	}
+
+	return obsolete, nil
 }
 
 func (s Syncer) writeFile(name string, data []byte) error {
