@@ -6,6 +6,7 @@ import (
 )
 
 func TestDefaultIgrore(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		filename      string
 		matchExpected bool
