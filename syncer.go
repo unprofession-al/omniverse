@@ -254,6 +254,7 @@ func getLineDiff(diff []diffmatchpatch.Diff, dmp *diffmatchpatch.DiffMatchPatch)
 			}
 		}
 		if err := scanner.Err(); err != nil {
+			err = nil
 			// TODO: we ignore that for because its just for debug output
 			// however this obvously shoud be handled
 		}
