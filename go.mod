@@ -3,12 +3,10 @@ module omniverse
 go 1.13
 
 require (
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/sirupsen/logrus v1.4.2
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
+	github.com/rs/xid v1.2.1
+	github.com/sergi/go-diff v1.1.0
 	github.com/spf13/cobra v0.0.5
-	github.com/stretchr/testify v1.4.0 // indirect
-	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	golang.org/x/tools v0.0.0-20191220234730-f13409bbebaf // indirect
 	gopkg.in/yaml.v2 v2.2.7
 )

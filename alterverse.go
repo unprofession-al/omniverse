@@ -1,128 +1,120 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sort"
-	"sync"
-	"text/template"
+	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
-type alterverseConfig map[string]map[string]string
+const alterverseFile = ".alterverse.yml"
 
-func (ac alterverseConfig) GetAlterverse(name string, files map[string][]byte) (alterverse, error) {
-	definitions, ok := ac[name]
-	if !ok {
-		return alterverse{}, fmt.Errorf("alterverse definitions for '%s' not found", name)
-	}
-	a := NewAlterverse(definitions, files)
-	return a, nil
+// Manifest contains a map of identifiers to thir values.
+type Manifest map[string]string
+
+// Alterverse contains specific information per alterverse.
+type Alterverse struct {
+	Manifest Manifest `json:"manifest" yaml:"manifest"`
+
+	location string
+	syncer   *Syncer
 }
 
-type alterverse struct {
-	sync.RWMutex
-	definitions map[string]string
-	files       map[string][]byte
-}
+// NewAlterverse takes a path to a dicectory, reads the manifest file,
+// performes necessary checks and returnes the alterverse.
+func NewAlterverse(location, ignore string) (*Alterverse, []error) {
+	a := &Alterverse{location: location}
 
-func NewAlterverse(definitions map[string]string, files map[string][]byte) alterverse {
-	return alterverse{
-		definitions: definitions,
-		files:       files,
-	}
-}
-
-func (a alterverse) Definitions() map[string]string {
-	return a.definitions
-}
-
-func (a alterverse) SubstituteDefinitions(expressionTemplate string) (map[string][]byte, error) {
-	a.RLock()
-	defer a.RUnlock()
-
-	rendered := map[string][]byte{}
-	lr, err := a.GetLineReplacer(expressionTemplate)
+	li, err := os.Stat(location)
 	if err != nil {
-		return rendered, err
+		err = fmt.Errorf("error while checking location '%s': %s", location, err)
+		return a, []error{err}
+	}
+	if !li.IsDir() {
+		err = fmt.Errorf("location '%s' does not seem to be a directory", location)
+		return a, []error{err}
 	}
 
-	for path, b := range a.files {
-		_, lb := detectLineBreak(b)
-		file := bytes.NewReader(b)
+	manifestPath := filepath.Join(location, alterverseFile)
+	manifestFile, err := ioutil.ReadFile(manifestPath)
+	if err != nil {
+		err = fmt.Errorf("error while reading manifest file '%s': %s", manifestPath, err)
+		return a, []error{err}
+	}
+	err = yaml.Unmarshal(manifestFile, a)
+	if err != nil {
+		err = fmt.Errorf("error while unmarshalling manifest file '%s': %s", manifestPath, err)
+		return a, []error{err}
+	}
 
-		out := []byte{}
-		scanner := bufio.NewScanner(file)
-		linenum := 1
-		for scanner.Scan() {
-			line := scanner.Bytes()
-			newLine, changed := lr(line)
-			if changed {
-				log.Info(fmt.Sprintf("Change on line %d of file %s:\n\told: %s\n\tnew: %s", linenum, path, string(line), string(newLine)))
-			}
-			out = append(out, newLine...)
-			out = append(out, lb...)
-			linenum++
+	a.syncer, err = NewSyncer(location, ignore)
+	if err != nil {
+		return a, []error{err}
+	}
+
+	errs := a.HasValueDublicates()
+	return a, errs
+}
+
+// Files reads all files related to the alterverse and returns them as a map where the keys are
+// the relative file names and the values are the bytes.
+func (a Alterverse) Files() (map[string][]byte, error) {
+	return a.syncer.ReadFiles()
+}
+
+// WriteFiles writes the files passed to the base directory of the alterverse. File names must
+// be relative to the alterverse. Files that exist on the file system but not in the map passed
+// will be deleted.
+func (a Alterverse) WriteFiles(files map[string][]byte) error {
+	deleteObselete := true
+	return a.syncer.WriteFiles(files, deleteObselete)
+}
+
+// HasValueDublicates checks some definitions have equal values strings. If this is true it is
+// impossible to deduce the singularity properly
+func (a Alterverse) HasValueDublicates() []error {
+	errs := []error{}
+
+	reverse := reverseStringMap(a.Manifest)
+	for v, k := range reverse {
+		if len(k) > 1 {
+			errs = append(errs, fmt.Errorf("the keys '%s' have the same value '%s'", strings.Join(k, ", "), v))
 		}
+	}
 
-		if err := scanner.Err(); err != nil {
-			return rendered, fmt.Errorf("failed to substitute strings in altiverse file '%s', error was %s", path, err.Error())
+	return errs
+}
+
+// reverseStringMap switches the keys and values of a map. Since values (of the input)
+// can be duplicated (different keys have the same value) the values of the map returned
+// is a list of all the keys (of the input map) with this particular value. The map returned
+// as well as its values are sorted alphabetically.
+func reverseStringMap(in map[string]string) map[string][]string {
+	tmp := make(map[string][]string)
+	for k, v := range in {
+		if existing, ok := tmp[v]; ok {
+			tmp[v] = append(existing, k)
+		} else {
+			tmp[v] = []string{k}
 		}
-
-		rendered[path] = out
 	}
 
-	return rendered, nil
-}
-
-func (a alterverse) GetLineReplacer(expressionTemplate string) (func([]byte) ([]byte, bool), error) {
-	// Reverse definitions (k=v/v=k), sort definition values by length
-	// This is to ensure that long strings are replaced first to avoid a
-	// potential conflict with shorter strings that are substrings of the
-	// larger string.
-	reverseDefinitions := make(map[string]string)
-	values := byLen{}
-	for k, v := range a.definitions {
-		reverseDefinitions[v] = k
-		values = append(values, v)
+	keys := make([]string, 0, len(tmp))
+	for k := range tmp {
+		keys = append(keys, k)
 	}
-	sort.Sort(sort.Reverse(byLen(values)))
+	sort.Strings(keys)
 
-	tmpl, err := template.New("expression").Parse(expressionTemplate)
-	out := func(in []byte) ([]byte, bool) {
-		changed := false
-		for _, v := range values {
-			val := []byte(v)
-			if bytes.Contains(in, val) {
-				var expression bytes.Buffer
-				err = tmpl.Execute(&expression, reverseDefinitions[v])
-				in = bytes.ReplaceAll(in, val, expression.Bytes())
-				changed = true
-			}
-		}
-		return in, changed
+	out := make(map[string][]string)
+	for _, k := range keys {
+		v := tmp[k]
+		sort.Strings(v)
+		out[k] = v
 	}
 
-	return out, err
-}
-
-// byLen implements the sort.Interface and allows to sort an array of strings
-// by its length. See https://golang.org/pkg/sort/#Interface
-type byLen []string
-
-// Len is part of the sort.Interface
-func (a byLen) Len() int {
-	return len(a)
-}
-
-// Less is part of the sort.Interface
-func (a byLen) Less(i, j int) bool {
-	return len(a[i]) < len(a[j])
-}
-
-// Swap is part of the sort.Interface
-func (a byLen) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
+	return out
 }
