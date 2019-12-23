@@ -13,11 +13,12 @@ var (
 	deduceAlterverseTo     string
 	deduceAlterverseIgnore string
 	deduceAlterverseDryRun bool
+	deduceAlterverseSilent bool
 
 	findContextsIn string
 )
 
-const defaultIgrore = `^.*[\\/]\..*|^\..*`
+const defaultIgnore = `^.*[\\/]\..*|^\..*`
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
@@ -26,8 +27,9 @@ func init() {
 	deduceAlterverseCmd.MarkFlagRequired("from")
 	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseTo, "to", "t", "", "destination alterverse path")
 	deduceAlterverseCmd.MarkFlagRequired("to")
-	deduceAlterverseCmd.Flags().StringVarP(&deduceAlterverseIgnore, "ignore", "i", defaultIgrore, "if a filename matches this regexp it is ignored")
+	deduceAlterverseCmd.Flags().StringVar(&deduceAlterverseIgnore, "ignore", defaultIgnore, "if a filename matches this regexp it is ignored - by default all hidden files and directories (starting with a '.') are ignored")
 	deduceAlterverseCmd.Flags().BoolVar(&deduceAlterverseDryRun, "dry-run", false, "only in-memory, no write to filesystem")
+	deduceAlterverseCmd.Flags().BoolVar(&deduceAlterverseSilent, "silent", false, "mimimum output, no diff")
 	rootCmd.AddCommand(deduceAlterverseCmd)
 
 	findContextsCmd.Flags().StringVar(&findContextsIn, "in", "", "alterverse path to check")
@@ -43,26 +45,46 @@ var deduceAlterverseCmd = &cobra.Command{
 	Use:   "deduce-alterverse",
 	Short: "Deduce an alterverse",
 	Run: func(cmd *cobra.Command, args []string) {
-		from, errs := NewAlterverse(deduceAlterverseFrom)
+		from, errs := NewAlterverse(deduceAlterverseFrom, deduceAlterverseIgnore)
 		exitOnErr(errs...)
-		fromSyncer, err := NewSyncer(deduceAlterverseFrom, deduceAlterverseIgnore)
-		exitOnErr(err)
-		fromData, err := fromSyncer.ReadFiles()
+		fromFiles, err := from.Files()
 		exitOnErr(err)
 
-		to, errs := NewAlterverse(deduceAlterverseTo)
+		to, errs := NewAlterverse(deduceAlterverseTo, deduceAlterverseIgnore)
 		exitOnErr(errs...)
-		toSyncer, err := NewSyncer(deduceAlterverseTo, deduceAlterverseIgnore)
+		toFilesCurrent, err := to.Files()
 		exitOnErr(err)
 
 		interverse, err := NewInterverse(from.Manifest, to.Manifest)
 		exitOnErr(err)
-		toData := interverse.Do(fromData)
+		toFilesNew := interverse.Do(fromFiles)
+
+		if !deduceAlterverseSilent {
+			diffs, toDelete, toCreate := DiffFiles(toFilesCurrent, toFilesNew)
+
+			for filename, diff := range diffs {
+				if diff == "" {
+					fmt.Printf("\n--- file '%s' is unchanged.\n", filename)
+				} else {
+					fmt.Printf("\n--- file '%s' has changes:\n%s", filename, diff)
+				}
+			}
+
+			for filename := range toDelete {
+				fmt.Printf("\n--- file '%s' will be deleted in destination.\n", filename)
+			}
+
+			for filename := range toCreate {
+				fmt.Printf("\n--- file '%s' will be created in destination.\n", filename)
+			}
+		}
 
 		if !deduceAlterverseDryRun {
-			deleteObselete := true
-			err = toSyncer.WriteFiles(toData, deleteObselete)
+			fmt.Printf("\n--- writing files\n")
+			err = to.WriteFiles(toFilesNew)
 			exitOnErr(err)
+		} else {
+			fmt.Printf("\n--- dry-run NO files will be written\n")
 		}
 	},
 }
@@ -75,11 +97,9 @@ the strings defined in the manifest as values appear. This if a string is presen
 contexts you perhaps want to consider to have more manifest definitions which are more percise`,
 	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		in, errs := NewAlterverse(findContextsIn)
+		in, errs := NewAlterverse(findContextsIn, deduceAlterverseIgnore)
 		exitOnErr(errs...)
-		inSyncer, err := NewSyncer(findContextsIn, deduceAlterverseIgnore)
-		exitOnErr(err)
-		inData, err := inSyncer.ReadFiles()
+		inData, err := in.Files()
 		exitOnErr(err)
 
 		contexts := map[string][]string{}

@@ -18,12 +18,14 @@ type Manifest map[string]string
 // Alterverse contains specific information per alterverse.
 type Alterverse struct {
 	Manifest Manifest `json:"manifest" yaml:"manifest"`
-	location string   `json:"location" yaml:"location"`
+
+	location string
+	syncer   *Syncer
 }
 
 // NewAlterverse takes a path to a dicectory, reads the manifest file,
 // performes necessary checks and returnes the alterverse.
-func NewAlterverse(location string) (*Alterverse, []error) {
+func NewAlterverse(location, ignore string) (*Alterverse, []error) {
 	a := &Alterverse{location: location}
 
 	li, err := os.Stat(location)
@@ -42,15 +44,33 @@ func NewAlterverse(location string) (*Alterverse, []error) {
 		err = fmt.Errorf("error while reading manifest file '%s': %s", manifestPath, err)
 		return a, []error{err}
 	}
-
 	err = yaml.Unmarshal(manifestFile, a)
 	if err != nil {
 		err = fmt.Errorf("error while unmarshalling manifest file '%s': %s", manifestPath, err)
 		return a, []error{err}
 	}
 
+	a.syncer, err = NewSyncer(location, ignore)
+	if err != nil {
+		return a, []error{err}
+	}
+
 	errs := a.HasValueDublicates()
 	return a, errs
+}
+
+// Files reads all files related to the alterverse and returns them as a map where the keys are
+// the relative file names and the values are the bytes.
+func (a Alterverse) Files() (map[string][]byte, error) {
+	return a.syncer.ReadFiles()
+}
+
+// WriteFiles writes the files passed to the base directory of the alterverse. File names must
+// be relative to the alterverse. Files that exist on the file system but not in the map passed
+// will be deleted.
+func (a Alterverse) WriteFiles(files map[string][]byte) error {
+	deleteObselete := true
+	return a.syncer.WriteFiles(files, deleteObselete)
 }
 
 // HasValueDublicates checks some definitions have equal values strings. If this is true it is

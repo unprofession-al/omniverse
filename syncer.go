@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Syncer allows read and write from a certain directory
@@ -47,8 +50,8 @@ func NewSyncer(basedir, ignored string) (*Syncer, error) {
 	return s, nil
 }
 
-func (s Syncer) listFiles() ([]string, error) {
-	list := []string{}
+func (s Syncer) listFiles() (map[string][]byte, error) {
+	list := map[string][]byte{}
 
 	err := filepath.Walk(s.basedir, func(path string, info os.FileInfo, err error) error {
 		path = strings.TrimPrefix(path, s.basedir)
@@ -59,7 +62,7 @@ func (s Syncer) listFiles() ([]string, error) {
 			return nil
 		}
 
-		list = append(list, path)
+		list[path] = nil
 		return nil
 	})
 	return list, err
@@ -69,8 +72,8 @@ func (s Syncer) isIgnored(path string) bool {
 	return s.ignore.MatchString(path)
 }
 
-func (s Syncer) deleteFiles(del []string) error {
-	for _, file := range del {
+func (s Syncer) deleteFiles(del map[string][]byte) error {
+	for file, _ := range del {
 		if s.isIgnored(file) {
 			continue
 		}
@@ -95,10 +98,12 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 	defer s.Unlock()
 
 	if del {
-		obsolete, err := s.findObsolete(files)
+		haveFiles, err := s.listFiles()
 		if err != nil {
-			return fmt.Errorf("failed looking for obsolete files in '%s', error is: %s", s.basedir, err.Error())
+			return fmt.Errorf("failed while listing files in '%s', error is: %s", s.basedir, err.Error())
 		}
+
+		_, obsolete, _ := findCommonFiles(haveFiles, files)
 
 		if len(obsolete) > 0 {
 			//log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
@@ -115,21 +120,25 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 	return nil
 }
 
-func (s Syncer) findObsolete(shouldHaveFile map[string][]byte) ([]string, error) {
-	obsolete := []string{}
-
-	haveFiles, err := s.listFiles()
-	if err != nil {
-		return obsolete, err
-	}
-
-	for _, f := range haveFiles {
-		if _, ok := shouldHaveFile[f]; !ok {
-			obsolete = append(obsolete, f)
+func findCommonFiles(a, b map[string][]byte) (common, onlyA, onlyB map[string][]byte) {
+	common = map[string][]byte{}
+	onlyA = map[string][]byte{}
+	for f := range a {
+		if _, ok := b[f]; !ok {
+			onlyA[f] = nil
+		} else {
+			common[f] = nil
 		}
 	}
 
-	return obsolete, nil
+	onlyB = map[string][]byte{}
+	for f := range b {
+		if _, ok := a[f]; !ok {
+			onlyB[f] = nil
+		}
+	}
+
+	return
 }
 
 func (s Syncer) writeFile(name string, data []byte) error {
@@ -210,4 +219,44 @@ func (s Syncer) ReadFiles() (map[string][]byte, error) {
 	})
 
 	return out, err
+}
+
+func DiffFiles(a, b map[string][]byte) (diffs map[string]string, obsolete, created map[string][]byte) {
+	common, obsolete, created := findCommonFiles(a, b)
+
+	diffs = map[string]string{}
+	dmp := diffmatchpatch.New()
+	for k := range common {
+		dataA := string(a[k])
+		dataB := string(b[k])
+
+		diff := dmp.DiffMain(dataA, dataB, false)
+		diffs[k] = getLineDiff(diff, dmp)
+	}
+
+	return
+}
+
+func getLineDiff(diff []diffmatchpatch.Diff, dmp *diffmatchpatch.DiffMatchPatch) string {
+	out := ""
+	if len(diff) > 1 {
+		r := strings.NewReader(dmp.DiffPrettyText(diff))
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// if the line contains any collor markers as used in
+			// https://github.com/sergi/go-diff/blob/master/diffmatchpatch/diff.go#L1183
+			// we consider the line to contain a change
+			if strings.Contains(line, "\x1b[32m") ||
+				strings.Contains(line, "\x1b[31m") ||
+				strings.Contains(line, "\x1b[0m") {
+				out = fmt.Sprintf("%s%s\n", out, line)
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			// TODO: we ignore that for because its just for debug output
+			// however this obvously shoud be handled
+		}
+	}
+	return out
 }

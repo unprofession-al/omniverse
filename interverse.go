@@ -40,14 +40,11 @@ func (t Interverse) Do(in map[string][]byte) map[string][]byte {
 		}
 		if !bytes.Equal(v, data) {
 			intermediate[k] = data
-		} else {
-			fmt.Printf("file '%s' is unchanged\n", k)
 		}
 	}
 
 	out := in
 	for k, v := range intermediate {
-		fmt.Printf("file '%s' is changed\n", k)
 		data := v
 		for _, lr := range t.lt {
 			data = bytes.ReplaceAll(data, []byte(lr.Key), []byte(lr.To))
