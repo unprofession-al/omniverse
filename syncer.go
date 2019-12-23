@@ -20,7 +20,7 @@ type Syncer struct {
 // NewSyncer takes a path to its basedir, a list of ignored files as well a
 // string channel for logging reasons. It returns a Syncer and and (if
 // adequate) an error.
-func NewSyncer(basedir string, ignored string) (*Syncer, error) {
+func NewSyncer(basedir, ignored string) (*Syncer, error) {
 	abs, err := filepath.Abs(basedir)
 	if err != nil {
 		return nil, err
