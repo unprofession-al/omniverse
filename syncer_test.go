@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"path/filepath"
 	"testing"
 )
+
+const testdata = "testdata"
 
 func TestCommonFiles(t *testing.T) {
 	t.Parallel()
@@ -33,28 +37,6 @@ func TestCommonFiles(t *testing.T) {
 		},
 	}
 
-	asMap := func(in []string) map[string][]byte {
-		out := map[string][]byte{}
-		for _, k := range in {
-			out[k] = nil
-		}
-		return out
-	}
-
-	checkSameFields := func(x, y map[string][]byte) bool {
-		for k := range x {
-			if _, ok := y[k]; !ok {
-				return false
-			}
-		}
-		for k := range y {
-			if _, ok := x[k]; !ok {
-				return false
-			}
-		}
-		return true
-	}
-
 	for nr, test := range tests {
 		t.Run(fmt.Sprintf("%d", nr), func(t *testing.T) {
 			common, onlyA, onlyB := findCommonFiles(asMap(test.a), asMap(test.b))
@@ -69,4 +51,81 @@ func TestCommonFiles(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListFile(t *testing.T) {
+	t.Parallel()
+	expected := map[string][]byte{
+		"FileA.txt": nil,
+	}
+
+	basepath := filepath.Join(testdata, "alterverse1")
+	syncer, err := NewSyncer(basepath, defaultIgnore)
+	if err != nil {
+		t.Errorf("syncer for '%s' could not be created, error was: %s", basepath, err.Error())
+	}
+
+	list, err := syncer.listFiles()
+	if err != nil {
+		t.Errorf("syncer for '%s' could not list files, error was: %s", basepath, err.Error())
+	}
+
+	if !checkSameFields(list, expected) {
+		t.Errorf("files in '%s' are not as expected: is %v, expected %v", basepath, list, expected)
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+	expected := map[string][]byte{
+		"FileA.txt": []byte("This is testdata containing bar1 and foo1"),
+	}
+
+	basepath := filepath.Join(testdata, "alterverse1")
+	syncer, err := NewSyncer(basepath, defaultIgnore)
+	if err != nil {
+		t.Errorf("syncer for '%s' could not be created, error was: %s", basepath, err.Error())
+	}
+
+	files, err := syncer.ReadFiles()
+	if err != nil {
+		t.Errorf("syncer for '%s' could not read files, error was: %s", basepath, err.Error())
+	}
+
+	if !checkSameFields(files, expected) {
+		t.Errorf("files in '%s' are not as expected: is %v, expected %v", basepath, files, expected)
+	}
+
+	for name, data := range expected {
+		fsdata, ok := files[name]
+		if !ok {
+			t.Errorf("file '%s' was expected to be present but was not", name)
+			continue
+		}
+		if bytes.Equal(fsdata, data) {
+			t.Errorf("content in file '%s' is not as expected", name)
+		}
+	}
+}
+
+func asMap(in []string) map[string][]byte {
+	out := map[string][]byte{}
+	for _, k := range in {
+		out[k] = nil
+	}
+	return out
+}
+
+func checkSameFields(x, y map[string][]byte) bool {
+	for k := range x {
+		if _, ok := y[k]; !ok {
+			return false
+		}
+	}
+	for k := range y {
+		if _, ok := x[k]; !ok {
+			return false
+		}
+	}
+	return true
 }

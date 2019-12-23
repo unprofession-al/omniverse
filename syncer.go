@@ -8,14 +8,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Syncer allows read and write from a certain directory
 type Syncer struct {
-	sync.RWMutex
 	basedir string
 	ignore  *regexp.Regexp
 }
@@ -93,9 +91,6 @@ func (s Syncer) deleteFiles(del map[string][]byte) error {
 // The del option configures if files that are absent in the map passed
 // but present on the file system should be deleted.
 func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
-	s.Lock()
-	defer s.Unlock()
-
 	if del {
 		haveFiles, err := s.listFiles()
 		if err != nil {
@@ -191,9 +186,6 @@ func (s Syncer) writeFile(name string, data []byte) error {
 // The keys of the map are the relative file paths, the value is the
 // actual content of the files as a byte slice.
 func (s Syncer) ReadFiles() (map[string][]byte, error) {
-	s.Lock()
-	defer s.Unlock()
-
 	out := map[string][]byte{}
 	err := filepath.Walk(s.basedir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
