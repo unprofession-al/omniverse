@@ -73,7 +73,7 @@ func (s Syncer) isIgnored(path string) bool {
 }
 
 func (s Syncer) deleteFiles(del map[string][]byte) error {
-	for file, _ := range del {
+	for file := range del {
 		if s.isIgnored(file) {
 			continue
 		}
@@ -123,18 +123,18 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 func findCommonFiles(a, b map[string][]byte) (common, onlyA, onlyB map[string][]byte) {
 	common = map[string][]byte{}
 	onlyA = map[string][]byte{}
-	for f := range a {
+	for f, data := range a {
 		if _, ok := b[f]; !ok {
-			onlyA[f] = nil
+			onlyA[f] = data
 		} else {
-			common[f] = nil
+			common[f] = data
 		}
 	}
 
 	onlyB = map[string][]byte{}
-	for f := range b {
+	for f, data := range b {
 		if _, ok := a[f]; !ok {
-			onlyB[f] = nil
+			onlyB[f] = data
 		}
 	}
 
