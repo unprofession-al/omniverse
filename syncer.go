@@ -82,7 +82,6 @@ func (s Syncer) deleteFiles(del map[string][]byte) error {
 		if err != nil {
 			return err
 		}
-		//log.Info(fmt.Sprintf("File '%s' deleted", path))
 	}
 	return nil
 }
@@ -106,7 +105,6 @@ func (s Syncer) WriteFiles(files map[string][]byte, del bool) error {
 		_, obsolete, _ := findCommonFiles(haveFiles, files)
 
 		if len(obsolete) > 0 {
-			//log.Info(fmt.Sprintf("The following files are not present in singularity and will be therefore removed: %s", strings.Join(obsolete, ", ")))
 			s.deleteFiles(obsolete)
 		}
 	}

@@ -27,11 +27,11 @@ func NewInterverse(from, to Manifest) (*Interverse, error) {
 	return i, err
 }
 
-// Do performs the actuall string substitution using the lookup table.
+// Deduce performs the actuall string substitution using the lookup table.
 // To ensure no faulty substitutions occure every required value from the
 // source is replaced with a generated key/id of a fixed length which in
 // guarantied to be unique.
-func (t Interverse) Do(in map[string][]byte) map[string][]byte {
+func (t Interverse) Deduce(in map[string][]byte) map[string][]byte {
 	intermediate := map[string][]byte{}
 	for k, v := range in {
 		data := v

@@ -57,7 +57,7 @@ var deduceAlterverseCmd = &cobra.Command{
 
 		interverse, err := NewInterverse(from.Manifest, to.Manifest)
 		exitOnErr(err)
-		toFilesNew := interverse.Do(fromFiles)
+		toFilesNew := interverse.Deduce(fromFiles)
 
 		if !deduceAlterverseSilent {
 			diffs, toDelete, toCreate := DiffFiles(toFilesCurrent, toFilesNew)

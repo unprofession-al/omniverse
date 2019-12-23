@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -90,15 +91,30 @@ func (a Alterverse) HasValueDublicates() []error {
 
 // reverseStringMap switches the keys and values of a map. Since values (of the input)
 // can be duplicated (different keys have the same value) the values of the map returned
-// is a list of all the keys (of the input map) with this particular value.
+// is a list of all the keys (of the input map) with this particular value. The map returned
+// as well as its values are sorted alphabetically.
 func reverseStringMap(in map[string]string) map[string][]string {
-	out := make(map[string][]string)
+	tmp := make(map[string][]string)
 	for k, v := range in {
-		if existing, ok := out[v]; ok {
-			out[v] = append(existing, k)
+		if existing, ok := tmp[v]; ok {
+			tmp[v] = append(existing, k)
 		} else {
-			out[v] = []string{k}
+			tmp[v] = []string{k}
 		}
 	}
+
+	keys := make([]string, 0, len(tmp))
+	for k := range tmp {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := make(map[string][]string)
+	for _, k := range keys {
+		v := tmp[k]
+		sort.Strings(v)
+		out[k] = v
+	}
+
 	return out
 }
