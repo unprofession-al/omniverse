@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -64,27 +65,27 @@ var deduceAlterverseCmd = &cobra.Command{
 
 			for filename, diff := range diffs {
 				if diff == "" {
-					fmt.Printf("\n--- file '%s' is unchanged.\n", filename)
+					fmt.Println(color.YellowString("--- file '%s' is unchanged.", filename))
 				} else {
-					fmt.Printf("\n--- file '%s' has changes:\n%s", filename, diff)
+					fmt.Printf(color.MagentaString("--- file '%s' has changes:\n", filename)+"%s", diff)
 				}
 			}
 
 			for filename := range toDelete {
-				fmt.Printf("\n--- file '%s' will be deleted in destination.\n", filename)
+				fmt.Println(color.RedString("--- file '%s' will be deleted in destination.", filename))
 			}
 
 			for filename := range toCreate {
-				fmt.Printf("\n--- file '%s' will be created in destination.\n", filename)
+				fmt.Println(color.GreenString("--- file '%s' will be created in destination.", filename))
 			}
 		}
 
 		if !deduceAlterverseDryRun {
-			fmt.Printf("\n--- writing files\n")
+			fmt.Println("--- writing files")
 			err = to.WriteFiles(toFilesNew)
 			exitOnErr(err)
 		} else {
-			fmt.Printf("\n--- dry-run NO files will be written\n")
+			fmt.Println("--- dry-run NO files will be written")
 		}
 	},
 }
