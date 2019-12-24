@@ -31,7 +31,7 @@ func NewInterverse(from, to Manifest) (*Interverse, error) {
 // To ensure no faulty substitutions occure every required value from the
 // source is replaced with a generated key/id of a fixed length which in
 // guarantied to be unique.
-func (t Interverse) Deduce(in map[string][]byte) map[string][]byte {
+func (t Interverse) Deduce(in map[string][]byte) (out map[string][]byte, toFound map[string][]string) {
 	intermediate := map[string][]byte{}
 	for k, v := range in {
 		data := v
@@ -43,7 +43,20 @@ func (t Interverse) Deduce(in map[string][]byte) map[string][]byte {
 		}
 	}
 
-	out := in
+	toFound = map[string][]string{}
+	for k, v := range intermediate {
+		for _, lr := range t.lt {
+			if bytes.Contains(v, []byte(lr.To)) {
+				if existing, ok := toFound[lr.To]; ok {
+					toFound[lr.To] = append(existing, k)
+				} else {
+					toFound[lr.To] = []string{k}
+				}
+			}
+		}
+	}
+
+	out = in
 	for k, v := range intermediate {
 		data := v
 		for _, lr := range t.lt {
@@ -52,7 +65,7 @@ func (t Interverse) Deduce(in map[string][]byte) map[string][]byte {
 		out[k] = data
 	}
 
-	return out
+	return
 }
 
 type lookupRecord struct {

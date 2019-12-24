@@ -9,11 +9,12 @@ import (
 func TestDeduce(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		manifestFrom map[string]string
-		from         map[string][]byte
-		manifestTo   map[string]string
-		to           map[string][]byte
-		errExpected  bool
+		manifestFrom    map[string]string
+		from            map[string][]byte
+		manifestTo      map[string]string
+		to              map[string][]byte
+		errExpected     bool
+		toFoundExpected bool
 	}{
 		"Basic": {
 			manifestFrom: map[string]string{
@@ -30,7 +31,8 @@ func TestDeduce(t *testing.T) {
 			to: map[string][]byte{
 				"test1": []byte("This is the __integration__ environment. The API can be reached at `api.example-int.com`."),
 			},
-			errExpected: false,
+			errExpected:     false,
+			toFoundExpected: false,
 		},
 		"ToKeyMissing": {
 			manifestFrom: map[string]string{
@@ -43,8 +45,9 @@ func TestDeduce(t *testing.T) {
 			manifestTo: map[string]string{
 				"url": "example-int.com",
 			},
-			to:          map[string][]byte{},
-			errExpected: true,
+			to:              map[string][]byte{},
+			errExpected:     true,
+			toFoundExpected: false,
 		},
 		"SwitchingStrings": {
 			manifestFrom: map[string]string{
@@ -67,7 +70,8 @@ All API calles to its integration environment (example-int.com) must be avoided.
 				"test1": []byte(`This is the repository of the integration environment (example-int.com).
 All API calles to its production environment (example.com) must be avoided.`),
 			},
-			errExpected: false,
+			errExpected:     false,
+			toFoundExpected: false,
 		},
 		"Substrings": {
 			manifestFrom: map[string]string{
@@ -92,7 +96,26 @@ All API calles to its production environment (example.com) must be avoided.`),
 - A management frontend is accessable via admin.example-int.com.
 - An API is exposing functionality at next-api.example-int.com.`),
 			},
-			errExpected: false,
+			errExpected:     false,
+			toFoundExpected: false,
+		},
+		"ToFoundExpected": {
+			manifestFrom: map[string]string{
+				"url": "example.com",
+				"env": "production",
+			},
+			from: map[string][]byte{
+				"test1": []byte("This is the __production__ environment. The API can be reached at `api.example.com` (not `example-int.com`)."),
+			},
+			manifestTo: map[string]string{
+				"url": "example-int.com",
+				"env": "integration",
+			},
+			to: map[string][]byte{
+				"test1": []byte("This is the __integration__ environment. The API can be reached at `api.example-int.com` (not `example-int.com`)."),
+			},
+			errExpected:     false,
+			toFoundExpected: true,
 		},
 	}
 
@@ -110,13 +133,19 @@ All API calles to its production environment (example.com) must be avoided.`),
 				return
 			}
 
-			r := i.Deduce(test.from)
+			r, toFound := i.Deduce(test.from)
 			if !reflect.DeepEqual(r, test.to) {
 				for file, data := range test.to {
 					if !bytes.Equal(data, r[file]) {
 						t.Errorf("result for file %s not as expected:\n--- Expected:\n%s\n--- Deduced:\n%s", file, string(data), string(r[file]))
 					}
 				}
+			}
+			hasToFound := len(toFound) > 0
+			if hasToFound && !test.toFoundExpected {
+				t.Errorf("found keys of destination alterverse but did not expect to, keys are: %s", toFound)
+			} else if !hasToFound && test.toFoundExpected {
+				t.Errorf("has not found any keys of destination alterverse but expected to")
 			}
 		})
 	}
