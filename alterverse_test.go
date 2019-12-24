@@ -12,7 +12,8 @@ func TestNewAlterverse(t *testing.T) {
 		ignore      string
 		errExpected bool
 	}{
-		{location: "alterverse1", ignore: defaultIgnore, errExpected: false},
+		{location: "alterverse_ok", ignore: defaultIgnore, errExpected: false},
+		{location: "alterverse_empty", ignore: defaultIgnore, errExpected: false},
 		{location: "alterverse_does_not_exist", ignore: defaultIgnore, errExpected: true},
 		{location: "alterverse_manifest_missing", ignore: defaultIgnore, errExpected: true},
 		{location: "alterverse_is_file", ignore: defaultIgnore, errExpected: true},

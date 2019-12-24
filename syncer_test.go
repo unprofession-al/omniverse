@@ -65,7 +65,7 @@ func TestListFile(t *testing.T) {
 		"FileA.txt": nil,
 	}
 
-	basepath := filepath.Join(testdata, "alterverse1")
+	basepath := filepath.Join(testdata, "alterverse_ok")
 	syncer, err := NewSyncer(basepath, defaultIgnore)
 	if err != nil {
 		t.Errorf("syncer for '%s' could not be created, error was: %s", basepath, err.Error())
@@ -87,7 +87,7 @@ func TestReadFile(t *testing.T) {
 		"FileA.txt": []byte("This is testdata containing bar1 and foo1"),
 	}
 
-	basepath := filepath.Join(testdata, "alterverse1")
+	basepath := filepath.Join(testdata, "alterverse_ok")
 	syncer, err := NewSyncer(basepath, defaultIgnore)
 	if err != nil {
 		t.Errorf("syncer for '%s' could not be created, error was: %s", basepath, err.Error())
