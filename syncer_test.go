@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"path/filepath"
 	"testing"
 )
@@ -11,34 +10,41 @@ const testdata = "testdata"
 
 func TestCommonFiles(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
+	tests := map[string]struct {
 		a, b, common, onlyA, onlyB []string
 	}{
-		{
+		"Overlapping": {
 			a:      []string{"a", "b", "c", "d"},
 			b:      []string{"b", "c", "d", "e"},
 			common: []string{"b", "c", "d"},
 			onlyA:  []string{"a"},
 			onlyB:  []string{"e"},
 		},
-		{
+		"OneHasMore": {
 			a:      []string{"a", "b", "c", "d"},
 			b:      []string{"a", "b", "c", "d", "e"},
 			common: []string{"a", "b", "c", "d"},
 			onlyA:  []string{},
 			onlyB:  []string{"e"},
 		},
-		{
+		"Empty": {
 			a:      []string{"a", "b", "c", "d"},
 			b:      []string{},
 			common: []string{},
 			onlyA:  []string{"a", "b", "c", "d"},
 			onlyB:  []string{},
 		},
+		"NoCommon": {
+			a:      []string{"a", "b"},
+			b:      []string{"c", "d"},
+			common: []string{},
+			onlyA:  []string{"a", "b"},
+			onlyB:  []string{"c", "d"},
+		},
 	}
 
-	for nr, test := range tests {
-		t.Run(fmt.Sprintf("%d", nr), func(t *testing.T) {
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
 			common, onlyA, onlyB := findCommonFiles(asMap(test.a), asMap(test.b))
 			if !checkSameFields(common, asMap(test.common)) {
 				t.Errorf("common files are not as expected: is %v, expected %v", common, asMap(test.common))
