@@ -2,8 +2,12 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
+
+	fuzz "github.com/google/gofuzz"
 )
 
 func TestDeduce(t *testing.T) {
@@ -148,5 +152,57 @@ All API calles to its production environment (example.com) must be avoided.`),
 				t.Errorf("has not found any keys of destination alterverse but expected to")
 			}
 		})
+	}
+}
+
+func TestDeduceFuzz(t *testing.T) {
+	t.Parallel()
+	type Test struct {
+		from         map[string][]byte
+		manifestFrom map[string]string
+		manifestTo   map[string]string
+	}
+
+	f := fuzz.New().RandSource(rand.NewSource(0)).NilChance(0).Funcs(
+		func(t *Test, c fuzz.Continue) {
+			t.manifestFrom = map[string]string{}
+			var xFrom string
+			c.Fuzz(&xFrom)
+			t.manifestFrom["x"] = xFrom
+
+			t.manifestTo = map[string]string{}
+			var xTo string
+			c.Fuzz(&xTo)
+			t.manifestTo["x"] = xTo
+
+			t.from = map[string][]byte{}
+			var file string
+			c.Fuzz(&file)
+			t.from["file"] = []byte(fmt.Sprintf("%s %s %s", file, xFrom, file))
+		},
+	)
+
+	for i := 0; i < 5000; i++ {
+		test := Test{}
+		f.Fuzz(&test)
+
+		firstI, err := NewInterverse(test.manifestFrom, test.manifestTo)
+		if err != nil {
+			t.Logf("skipped")
+			continue
+		}
+		firstR, firstToFound := firstI.Deduce(test.from)
+
+		secondI, err := NewInterverse(test.manifestTo, test.manifestFrom)
+		if err != nil {
+			t.Logf("skipped")
+			continue
+		}
+		secondR, _ := secondI.Deduce(firstR)
+
+		if !reflect.DeepEqual(test.from, secondR) && len(firstToFound) == 0 {
+			t.Logf("in: %+v\nout: %+v\n", test.from, secondR)
+			t.Errorf("failed")
+		}
 	}
 }
