@@ -7,7 +7,8 @@ import (
 )
 
 func TestNewAlterverse(t *testing.T) {
-	tests := []struct {
+	t.Parallel()
+        tests := []struct {
 		location    string
 		ignore      string
 		errExpected bool
