@@ -12,7 +12,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 )
 
-var randIterations = flag.Int("randiter", 1000000, "number of iterations for randomized/fuzzed tests")
+var randIterations = flag.Int("randiter", 1000, "number of iterations for randomized/fuzzed tests")
 var log = flag.Bool("log", false, "print additional log")
 
 func TestDeduce(t *testing.T) {
@@ -219,7 +219,7 @@ func TestDeduceRoundtripFuzz(t *testing.T) {
 		},
 	)
 
-	skipped := 0
+	skipped, errors := 0, 0
 	for i := 0; i < *randIterations; i++ {
 		test := Test{}
 		f.Fuzz(&test)
@@ -240,22 +240,22 @@ func TestDeduceRoundtripFuzz(t *testing.T) {
 
 		if !reflect.DeepEqual(test.from, secondR) && len(firstToFound) == 0 {
 			if *log {
-				t.Logf("--- fromManifest:\n%+v\n\n", test.manifestFrom)
-				t.Logf("--- toManifest:\n%+v\n\n", test.manifestTo)
+				t.Logf("--- lookupTable:\n%s\n", firstI.lt.dump())
 				for k := range test.from {
 					t.Logf("--- file: %s\n", k)
-					t.Logf("expecded:\n%s\n\nhas:\n%s\n", test.from[k], secondR[k])
+					t.Logf("expected:\n%s\nhas:\n%s\n", test.from[k], secondR[k])
 				}
 			}
-			t.Errorf("failed")
+			errors++
 		}
 	}
-	if *log {
-		t.Logf("%d tests skipped due to handled errors", skipped)
+	if errors > 0 {
+		t.Errorf("%d errors occurred", errors)
 	}
+	t.Logf("%d tests skipped due to handled errors", skipped)
 }
 
-func TesntDeduceRoundtripRand(t *testing.T) {
+func TestDeduceRoundtripRand(t *testing.T) {
 	t.Parallel()
 	type Test struct {
 		from         map[string][]byte
@@ -279,7 +279,7 @@ func TesntDeduceRoundtripRand(t *testing.T) {
 		}
 	}
 
-	skipped := 0
+	skipped, errors := 0, 0
 	for i := 0; i < *randIterations; i++ {
 		test := randTest()
 
@@ -299,19 +299,19 @@ func TesntDeduceRoundtripRand(t *testing.T) {
 
 		if !reflect.DeepEqual(test.from, secondR) && len(firstToFound) == 0 {
 			if *log {
-				t.Logf("--- fromManifest:\n%+v\n\n", test.manifestFrom)
-				t.Logf("--- toManifest:\n%+v\n\n", test.manifestTo)
+				t.Logf("--- lookupTable:\n%s\n", firstI.lt.dump())
 				for k := range test.from {
 					t.Logf("--- file: %s\n", k)
-					t.Logf("expecded:\n%s\n\nhas:\n%s\n", test.from[k], secondR[k])
+					t.Logf("expected:\n%s\nhas:\n%s\n", test.from[k], secondR[k])
 				}
 			}
-			t.Errorf("failed")
+			errors++
 		}
 	}
-	if *log {
-		t.Logf("%d tests skipped due to handled errors", skipped)
+	if errors > 0 {
+		t.Errorf("%d errors occurred", errors)
 	}
+	t.Logf("%d tests skipped due to handled errors", skipped)
 }
 
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))

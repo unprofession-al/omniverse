@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/rs/xid"
 )
@@ -131,3 +132,14 @@ func haveSameKeys(a, b map[string]string) (bool, []string) {
 func (lt lookupTable) Len() int           { return len(lt) }
 func (lt lookupTable) Less(i, j int) bool { return len(lt[i].From) < len(lt[j].From) }
 func (lt lookupTable) Swap(i, j int)      { lt[i], lt[j] = lt[j], lt[i] }
+
+func (lt lookupTable) dump() string {
+	var out bytes.Buffer
+	w := tabwriter.NewWriter(&out, 0, 0, 1, ' ', tabwriter.Debug)
+	fmt.Fprintln(w, "name\tfrom\tto\tkey")
+	for _, record := range lt {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", record.Name, record.From, record.To, record.Key)
+	}
+	w.Flush()
+	return out.String()
+}
