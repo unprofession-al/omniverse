@@ -10,7 +10,7 @@ import (
 )
 
 // Interverse holds all data and logic to convert the data from
-// one alterverse to anotherp.
+// one alterverse to another alterverse.
 type Interverse struct {
 	lt lookupTable
 }
@@ -18,10 +18,13 @@ type Interverse struct {
 // NewInterverse takes two manifests, builds a lookup table, sorts
 // this table (long values of the 'source' alterverse must come first
 // to ensure proper string substitution) and returns a ready to use
-// Interverse
+// Interverse.
 func NewInterverse(from, to Manifest) (*Interverse, error) {
 	i := &Interverse{}
 	lt, err := newLookupTable(from, to)
+	// the reverse sort is important: it ensures that long strings are replaced
+	// first so shorter strings which are substrings of the longer ones do not
+	// interfer with those.
 	sort.Sort(sort.Reverse(lt))
 	i.lt = lt
 	return i, err
@@ -56,7 +59,11 @@ func (t Interverse) Deduce(in map[string][]byte) (out map[string][]byte, toFound
 		}
 	}
 
-	out = in
+	out = map[string][]byte{}
+	for k, v := range in {
+		out[k] = v
+	}
+
 	for k, v := range intermediate {
 		data := v
 		for _, lr := range t.lt {
@@ -84,9 +91,17 @@ func newLookupTable(from, to map[string]string) (lookupTable, error) {
 		return lookupTable(lt), fmt.Errorf("the following keys are missing: %s", strings.Join(missing, ", "))
 	}
 
-	for k, v := range from {
+	for k := range from {
+		if from[k] == "" {
+			return lookupTable(lt), fmt.Errorf("key	'%s' in 'from' manifest must not be empty", k)
+		}
+
+		if to[k] == "" {
+			return lookupTable(lt), fmt.Errorf("key	'%s' in 'to' manifest must not be empty", k)
+		}
+
 		lr := &lookupRecord{
-			From: v,
+			From: from[k],
 			To:   to[k],
 			Key:  xid.New().String(),
 			Name: k,

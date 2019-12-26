@@ -2,13 +2,18 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	fuzz "github.com/google/gofuzz"
 )
+
+var randIterations = flag.Int("randiter", 1000000, "number of iterations for randomized/fuzzed tests")
+var log = flag.Bool("log", false, "print additional log")
 
 func TestDeduce(t *testing.T) {
 	t.Parallel()
@@ -121,6 +126,38 @@ All API calles to its production environment (example.com) must be avoided.`),
 			errExpected:     false,
 			toFoundExpected: true,
 		},
+		"EmptyKeyInFrom": {
+			manifestFrom: map[string]string{
+				"env": "",
+			},
+			from: map[string][]byte{
+				"test1": []byte("This is the __production__ environment."),
+			},
+			manifestTo: map[string]string{
+				"env": "integration",
+			},
+			to: map[string][]byte{
+				"test1": []byte{},
+			},
+			errExpected:     true,
+			toFoundExpected: false,
+		},
+		"EmptyKeyInTo": {
+			manifestFrom: map[string]string{
+				"env": "production",
+			},
+			from: map[string][]byte{
+				"test1": []byte("This is the __production__ environment."),
+			},
+			manifestTo: map[string]string{
+				"env": "",
+			},
+			to: map[string][]byte{
+				"test1": []byte{},
+			},
+			errExpected:     true,
+			toFoundExpected: false,
+		},
 	}
 
 	for name, test := range tests {
@@ -155,7 +192,7 @@ All API calles to its production environment (example.com) must be avoided.`),
 	}
 }
 
-func TestDeduceFuzz(t *testing.T) {
+func TestDeduceRoundtripFuzz(t *testing.T) {
 	t.Parallel()
 	type Test struct {
 		from         map[string][]byte
@@ -182,27 +219,119 @@ func TestDeduceFuzz(t *testing.T) {
 		},
 	)
 
-	for i := 0; i < 5000; i++ {
+	skipped := 0
+	for i := 0; i < *randIterations; i++ {
 		test := Test{}
 		f.Fuzz(&test)
 
 		firstI, err := NewInterverse(test.manifestFrom, test.manifestTo)
 		if err != nil {
-			t.Logf("skipped")
+			skipped++
 			continue
 		}
 		firstR, firstToFound := firstI.Deduce(test.from)
 
 		secondI, err := NewInterverse(test.manifestTo, test.manifestFrom)
 		if err != nil {
-			t.Logf("skipped")
+			skipped++
 			continue
 		}
 		secondR, _ := secondI.Deduce(firstR)
 
 		if !reflect.DeepEqual(test.from, secondR) && len(firstToFound) == 0 {
-			t.Logf("in: %+v\nout: %+v\n", test.from, secondR)
+			if *log {
+				t.Logf("--- fromManifest:\n%+v\n\n", test.manifestFrom)
+				t.Logf("--- toManifest:\n%+v\n\n", test.manifestTo)
+				for k := range test.from {
+					t.Logf("--- file: %s\n", k)
+					t.Logf("expecded:\n%s\n\nhas:\n%s\n", test.from[k], secondR[k])
+				}
+			}
 			t.Errorf("failed")
 		}
 	}
+	if *log {
+		t.Logf("%d tests skipped due to handled errors", skipped)
+	}
+}
+
+func TesntDeduceRoundtripRand(t *testing.T) {
+	t.Parallel()
+	type Test struct {
+		from         map[string][]byte
+		manifestFrom map[string]string
+		manifestTo   map[string]string
+	}
+
+	randTest := func() Test {
+		charset := string(randBytes(randInt(1, 66)))
+
+		return Test{
+			from: map[string][]byte{
+				"file": randBytesWithCharset(randInt(5, 1000), charset),
+			},
+			manifestFrom: map[string]string{
+				"x": string(randBytesWithCharset(randInt(1, 10), charset)),
+			},
+			manifestTo: map[string]string{
+				"x": string(randBytesWithCharset(randInt(1, 10), charset)),
+			},
+		}
+	}
+
+	skipped := 0
+	for i := 0; i < *randIterations; i++ {
+		test := randTest()
+
+		firstI, err := NewInterverse(test.manifestFrom, test.manifestTo)
+		if err != nil {
+			skipped++
+			continue
+		}
+		firstR, firstToFound := firstI.Deduce(test.from)
+
+		secondI, err := NewInterverse(test.manifestTo, test.manifestFrom)
+		if err != nil {
+			skipped++
+			continue
+		}
+		secondR, _ := secondI.Deduce(firstR)
+
+		if !reflect.DeepEqual(test.from, secondR) && len(firstToFound) == 0 {
+			if *log {
+				t.Logf("--- fromManifest:\n%+v\n\n", test.manifestFrom)
+				t.Logf("--- toManifest:\n%+v\n\n", test.manifestTo)
+				for k := range test.from {
+					t.Logf("--- file: %s\n", k)
+					t.Logf("expecded:\n%s\n\nhas:\n%s\n", test.from[k], secondR[k])
+				}
+			}
+			t.Errorf("failed")
+		}
+	}
+	if *log {
+		t.Logf("%d tests skipped due to handled errors", skipped)
+	}
+}
+
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+const defaultCharset = "abcdefghijklmnopqrstuvwxyz" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" +
+	"-_. "
+
+func randBytesWithCharset(length int, charset string) []byte {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return b
+}
+
+func randBytes(length int) []byte {
+	return randBytesWithCharset(length, defaultCharset)
+}
+
+func randInt(min, max int) int {
+	return seededRand.Intn(max-min) + min
 }
