@@ -15,7 +15,7 @@ var (
 )
 
 func main() {
-	err := rootCmd.Execute()
+	err := NewApp().Execute()
 	exitOnErr(err)
 }
 
