@@ -58,14 +58,7 @@ var deduceAlterverseCmd = &cobra.Command{
 
 		interverse, err := NewInterverse(from.Manifest, to.Manifest)
 		exitOnErr(err)
-		toFilesNew, toFound := interverse.Deduce(fromFiles)
-
-		errs = []error{}
-		for found, files := range toFound {
-			for _, file := range files {
-				errs = append(errs, fmt.Errorf("the key '%s' (of target altiverse) was already found in file '%s'", found, file))
-			}
-		}
+		toFilesNew, errs := interverse.DeduceStrict(fromFiles)
 		exitOnErr(errs...)
 
 		if !deduceAlterverseSilent {
