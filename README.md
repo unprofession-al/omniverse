@@ -94,16 +94,15 @@ resource "aws_lb" "test" {
 ## Run
 
 ```bash
-# omniverse help
 Create a copy of a directory with deviations
 
 Usage:
   omniverse [command]
 
 Available Commands:
-  deduce-alterverse Deduce an alterverse
-  help              Help about any command
-  version           Print version info
+  deduce      Deduce an alterverse
+  help        Help about any command
+  version     Print version info
 
 Flags:
   -h, --help   help for omniverse
