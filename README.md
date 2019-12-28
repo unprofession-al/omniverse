@@ -94,6 +94,7 @@ resource "aws_lb" "test" {
 ## Run
 
 ```bash
+# omniverse help
 Create a copy of a directory with deviations
 
 Usage:
@@ -113,5 +114,5 @@ Use "omniverse [command] --help" for more information about a command.
 To execute the example from the _Configuration_ section run:
 
 ```
-omniverse deduce-alterverse --from /tmp/prod --to /tmp/test
+omniverse deduce --from /tmp/prod --to /tmp/test
 ```
