@@ -29,6 +29,13 @@ type App struct {
 func NewApp() *App {
 	a := &App{}
 
+	// root
+	rootCmd := &cobra.Command{
+		Use:   "omniverse",
+		Short: "Create a copy of a directory with deviations",
+	}
+	a.Execute = rootCmd.Execute
+
 	// deduce
 	deduceCmd := &cobra.Command{
 		Use:   "deduce",
@@ -42,6 +49,7 @@ func NewApp() *App {
 	deduceCmd.Flags().StringVar(&a.cfg.deduceIgnore, "ignore", defaultIgnore, "if a filename matches this regexp it is ignored - by default all hidden files and directories (starting with a '.') are ignored")
 	deduceCmd.Flags().BoolVar(&a.cfg.deduceDryRun, "dry-run", false, "only in-memory, no write to filesystem")
 	deduceCmd.Flags().BoolVar(&a.cfg.deduceSilent, "silent", false, "mimimum output, no diff")
+	rootCmd.AddCommand(deduceCmd)
 
 	// contexts
 	contextsCmd := &cobra.Command{
@@ -54,6 +62,7 @@ contexts you perhaps want to consider to have more manifest definitions which ar
 		Run:    a.contextsCmd,
 	}
 	contextsCmd.Flags().StringVar(&a.cfg.contextsIn, "in", ".", "alterverse path to check")
+	rootCmd.AddCommand(contextsCmd)
 
 	// version
 	versionCmd := &cobra.Command{
@@ -61,16 +70,7 @@ contexts you perhaps want to consider to have more manifest definitions which ar
 		Short: "Print version info",
 		Run:   a.versionCmd,
 	}
-
-	// root
-	rootCmd := &cobra.Command{
-		Use:   "omniverse",
-		Short: "Create a copy of a directory with deviations",
-	}
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(deduceCmd)
-	rootCmd.AddCommand(contextsCmd)
-	a.Execute = rootCmd.Execute
 
 	return a
 }
