@@ -120,7 +120,7 @@ func (a *App) deduceCmd(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (a App) contextsCmd(cmd *cobra.Command, args []string) {
+func (a *App) contextsCmd(cmd *cobra.Command, args []string) {
 	in, errs := NewAlterverse(a.cfg.contextsIn, a.cfg.deduceIgnore)
 	exitOnErr(errs...)
 	inData, err := in.Files()
@@ -156,9 +156,9 @@ func (a App) contextsCmd(cmd *cobra.Command, args []string) {
 	}
 	d, err := yaml.Marshal(&contexts)
 	exitOnErr(err)
-	fmt.Printf("---g \n%s\n\n", string(d))
+	fmt.Printf("--- \n%s\n\n", string(d))
 }
 
-func (a App) versionCmd(cmd *cobra.Command, args []string) {
+func (a *App) versionCmd(cmd *cobra.Command, args []string) {
 	fmt.Println(versionInfo())
 }
