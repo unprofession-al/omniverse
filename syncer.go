@@ -166,7 +166,12 @@ func (s Syncer) writeFile(name string, data []byte) error {
 		defer file.Close()
 	}
 
-	_, err = file.Write(data)
+	fileLen, err := file.Write(data)
+	if err != nil {
+		return err
+	}
+
+	err = os.Truncate(path, int64(fileLen))
 	if err != nil {
 		return err
 	}
