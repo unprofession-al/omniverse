@@ -14,12 +14,14 @@ const defaultIgnore = `^.*[\\/]\..*|^\..*`
 type App struct {
 	// config
 	cfg struct {
-		deduceFrom   string
-		deduceTo     string
-		deduceIgnore string
-		deduceDryRun bool
-		deduceSilent bool
-		contextsIn   string
+		deduceFrom    string
+		deduceTo      string
+		deduceIgnore  string
+		deduceDryRun  bool
+		deduceSilent  bool
+		contextsIn    string
+		observeIn     string
+		observeIgnore string
 	}
 
 	// entry point
@@ -63,6 +65,18 @@ contexts you perhaps want to consider to have more manifest definitions which ar
 	}
 	contextsCmd.Flags().StringVar(&a.cfg.contextsIn, "in", ".", "alterverse path to check")
 	rootCmd.AddCommand(contextsCmd)
+
+	// observe
+	observeCmd := &cobra.Command{
+		Use:    "observe",
+		Short:  "Observes changes and prints information to guard consintency",
+		Long:   ``,
+		Hidden: true,
+		Run:    a.observeCmd,
+	}
+	observeCmd.Flags().StringVar(&a.cfg.observeIn, "in", ".", "alterverse path to observe")
+	observeCmd.Flags().StringVar(&a.cfg.observeIgnore, "ignore", defaultIgnore, "if a filename matches this regexp it is ignored - by default all hidden files and directories (starting with a '.') are ignored")
+	rootCmd.AddCommand(observeCmd)
 
 	// version
 	versionCmd := &cobra.Command{
@@ -157,6 +171,14 @@ func (a *App) contextsCmd(cmd *cobra.Command, args []string) {
 	d, err := yaml.Marshal(&contexts)
 	exitOnErr(err)
 	fmt.Printf("--- \n%s\n\n", string(d))
+}
+
+func (a *App) observeCmd(cmd *cobra.Command, args []string) {
+	o, err := NewObserver(a.cfg.observeIn, a.cfg.observeIgnore)
+	exitOnErr(err)
+
+	err = o.Run()
+	exitOnErr(err)
 }
 
 func (a *App) versionCmd(cmd *cobra.Command, args []string) {
