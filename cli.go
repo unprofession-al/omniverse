@@ -14,12 +14,13 @@ const defaultIgnore = `^.*[\\/]\..*|^\..*`
 type App struct {
 	// config
 	cfg struct {
-		deduceFrom   string
-		deduceTo     string
-		deduceIgnore string
-		deduceDryRun bool
-		deduceSilent bool
-		contextsIn   string
+		deduceFrom     string
+		deduceTo       string
+		deduceIgnore   string
+		deduceDryRun   bool
+		deduceSilent   bool
+		contextsIn     string
+		contextsIgnore string
 	}
 
 	// entry point
@@ -62,6 +63,7 @@ contexts you perhaps want to consider to have more manifest definitions which ar
 		Run:    a.contextsCmd,
 	}
 	contextsCmd.Flags().StringVar(&a.cfg.contextsIn, "in", ".", "alterverse path to check")
+	contextsCmd.Flags().StringVar(&a.cfg.contextsIgnore, "ignore", defaultIgnore, "if a filename matches this regexp it is ignored - by default all hidden files and directories (starting with a '.') are ignored")
 	rootCmd.AddCommand(contextsCmd)
 
 	// version
@@ -121,7 +123,7 @@ func (a *App) deduceCmd(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) contextsCmd(cmd *cobra.Command, args []string) {
-	in, errs := NewAlterverse(a.cfg.contextsIn, a.cfg.deduceIgnore)
+	in, errs := NewAlterverse(a.cfg.contextsIn, a.cfg.contextsIgnore)
 	exitOnErr(errs...)
 	inData, err := in.Files()
 	exitOnErr(err)
