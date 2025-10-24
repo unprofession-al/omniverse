@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 )
 
 func TestNewAlterverse(t *testing.T) {
 	t.Parallel()
-        tests := []struct {
+	tests := []struct {
 		location    string
 		ignore      string
 		errExpected bool
@@ -83,16 +82,4 @@ func TestValueDublicates(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ExampleReverseStringMap() {
-	m := map[string]string{
-		"foo":    "test",
-		"bar":    "bla",
-		"foobar": "bla",
-	}
-	r := reverseStringMap(m)
-	fmt.Println(r)
-
-	// Output: map[bla:[bar foobar] test:[foo]]
 }
