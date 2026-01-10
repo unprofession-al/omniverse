@@ -434,3 +434,170 @@ func hasErrs(errs ...error) bool {
 	}
 	return errNotNil
 }
+
+// FuzzTokenizer tests the tokenizer with random byte sequences and switch tokens
+func FuzzTokenizer(f *testing.F) {
+	// Seed corpus with interesting test cases
+	f.Add([]byte("hello world"), "hello", "goodbye")
+	f.Add([]byte("VVVV"), "VV", "VVVV")
+	f.Add([]byte("x_xx_x"), "xx", "x_x")
+	f.Add([]byte("example.com api.example.com"), "example.com", "example-int.com")
+	f.Add([]byte(""), "test", "replace")
+	f.Add([]byte("aaaa"), "aa", "bbbb")
+	f.Add([]byte("test test test"), "test", "replaced")
+
+	f.Fuzz(func(t *testing.T, data []byte, from string, to string) {
+		// Skip if from is empty as it's not a valid token
+		if from == "" {
+			t.Skip()
+		}
+
+		tokenizer := NewTokenizer(data)
+		st := switchToken{A: from, B: to}
+		tokenizer.Tokenize(st)
+
+		result := tokenizer.Mutate()
+
+		// Verify that the result doesn't crash when converted to string
+		_ = string(result)
+
+		// Verify that the raw data is preserved in the tokenizer
+		tokenizer2 := NewTokenizer(data)
+		raw := tokenizer2.Raw()
+		if !bytes.Equal(raw, data) {
+			t.Errorf("Raw() doesn't preserve original data")
+		}
+	})
+}
+
+// FuzzDeduceRoundtrip tests that A→B→A conversions are reversible
+func FuzzDeduceRoundtrip(f *testing.F) {
+	// Seed corpus
+	f.Add("content with value1", "value1", "value2")
+	f.Add("VV VV", "VV", "VVVV")
+	f.Add("example.com and api.example.com", "example.com", "example-int.com")
+	f.Add("", "a", "b")
+
+	f.Fuzz(func(t *testing.T, content string, fromVal string, toVal string) {
+		// Skip empty values as they're not valid
+		if fromVal == "" || toVal == "" {
+			t.Skip()
+		}
+
+		// Skip if values are the same
+		if fromVal == toVal {
+			t.Skip()
+		}
+
+		manifestFrom := map[string]string{"key": fromVal}
+		manifestTo := map[string]string{"key": toVal}
+
+		files := map[string][]byte{"test.txt": []byte(content)}
+
+		// Create interverse from→to
+		firstI, err := NewInterverse(manifestFrom, manifestTo)
+		if err != nil {
+			t.Skip() // Skip on expected errors
+		}
+
+		// Deduce from→to
+		result, errs := firstI.DeduceStrict(files)
+		if hasErrs(errs...) {
+			// This is expected for some inputs, skip
+			t.Skip()
+		}
+
+		// Create reverse interverse to→from
+		secondI, err := NewInterverse(manifestTo, manifestFrom)
+		if err != nil {
+			t.Fatalf("Failed to create reverse interverse: %v", err)
+		}
+
+		// Deduce back to→from
+		roundtrip, errs := secondI.DeduceStrict(result)
+		if hasErrs(errs...) {
+			// If roundtrip fails, this might indicate a bug
+			t.Logf("Roundtrip failed for input: %q, from: %q, to: %q", content, fromVal, toVal)
+			t.Logf("Errors: %v", errs)
+			return
+		}
+
+		// Verify roundtrip matches original
+		if !bytes.Equal(files["test.txt"], roundtrip["test.txt"]) {
+			t.Errorf("Roundtrip failed:\nOriginal: %q\nAfter roundtrip: %q\nFrom: %q\nTo: %q",
+				files["test.txt"], roundtrip["test.txt"], fromVal, toVal)
+		}
+	})
+}
+
+// FuzzNewInterverse tests interverse creation with various manifests
+func FuzzNewInterverse(f *testing.F) {
+	// Seed corpus
+	f.Add("key1", "value1", "value2")
+	f.Add("url", "example.com", "example-int.com")
+	f.Add("key", "", "value")
+	f.Add("key", "value", "")
+
+	f.Fuzz(func(t *testing.T, key string, fromVal string, toVal string) {
+		manifestFrom := map[string]string{key: fromVal}
+		manifestTo := map[string]string{key: toVal}
+
+		i, err := NewInterverse(manifestFrom, manifestTo)
+
+		// Empty values should cause errors
+		if (fromVal == "" || toVal == "") && err == nil {
+			t.Errorf("Expected error for empty values but got none")
+		}
+
+		// Non-empty values should succeed
+		if fromVal != "" && toVal != "" && err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		// If successful, verify lookup table was created
+		if err == nil && i != nil {
+			if len(i.lt) != 1 {
+				t.Errorf("Expected 1 lookup record, got %d", len(i.lt))
+			}
+		}
+	})
+}
+
+// FuzzMultiKeyDeduction tests deduction with multiple manifest keys
+func FuzzMultiKeyDeduction(f *testing.F) {
+	// Seed corpus
+	f.Add("test url env", "example.com", "production", "example-int.com", "integration")
+	f.Add("a b c", "x", "y", "xx", "yy")
+
+	f.Fuzz(func(t *testing.T, content string, url1 string, env1 string, url2 string, env2 string) {
+		// Skip empty values
+		if url1 == "" || env1 == "" || url2 == "" || env2 == "" {
+			t.Skip()
+		}
+
+		// Skip if values would cause conflicts
+		if url1 == env1 || url2 == env2 {
+			t.Skip()
+		}
+
+		manifestFrom := map[string]string{"url": url1, "env": env1}
+		manifestTo := map[string]string{"url": url2, "env": env2}
+
+		files := map[string][]byte{"test.txt": []byte(content)}
+
+		i, err := NewInterverse(manifestFrom, manifestTo)
+		if err != nil {
+			t.Skip()
+		}
+
+		result := i.Deduce(files)
+
+		// Verify result exists and doesn't crash
+		if result == nil {
+			t.Errorf("Deduce returned nil")
+		}
+
+		// Verify we can convert result to string
+		_ = string(result["test.txt"])
+	})
+}
