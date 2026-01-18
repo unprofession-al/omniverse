@@ -1,3 +1,5 @@
+> **This repository has been archived.** Development has moved to [codeberg.org/unprfssnl/omniverse](https://codeberg.org/unprfssnl/omniverse).
+
 # Omniverse
 
 Omniverse allows to substitute strings in a set of files
