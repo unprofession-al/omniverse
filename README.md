@@ -6,17 +6,37 @@ Omniverse allows to substitute strings in a set of files
 
 ### String substitution
 
-Omniverse is a tiny command line tool. It's main purpose is to perform string
+Omniverse is a tiny command line tool. Its main purpose is to perform string
 substitution on multiple files in a correct manner. It does so by reading a source
 directory and its configuration file (`manifest`) and creating an altered copy of
 the directories content in a destination directory using another `manifest`. 
 
-The `manifests` are a simple mappings of the strings that are required to substitute.
+The `manifests` are simple mappings of the strings that are required to substitute.
 
-### Thats is
+### That's it
 
 Omniverse does nothing other than that: No complex templating or other logic is
 applied other than string substitution. This is considered a feature.
+
+### When to Use (and When Not To)
+
+Omniverse is intentionally simple and works best for specific use cases. However, in many situations
+other approaches are preferable:
+
+- **Terraform modules**: If you're managing infrastructure as code, proper modularization with input
+  variables is usually the better choice. It provides type safety, validation, and better tooling support.
+- **Helm charts / Kustomize**: For Kubernetes configurations, these tools offer environment-specific
+  overlays with proper schema validation.
+- **Configuration management tools**: Ansible, Puppet, or Chef provide templating with logic, facts,
+  and proper secret management.
+- **Environment variables**: For application configuration, 12-factor style environment variables
+  are often simpler and more portable.
+- **Template engines**: Tools like `envsubst`, Jinja2, or Go templates offer more control when you
+  need conditional logic or loops.
+
+Omniverse shines when you need to maintain parallel copies of existing files with minimal changes to
+the original workflow -- for example, when retrofitting environment separation onto a codebase that
+wasn't designed for it, or when the overhead of proper tooling isn't justified.
 
 ## Install
 
@@ -37,8 +57,8 @@ Make sure you have [go](https://golang.org/doc/install) installed, then run:
 ## Configuration
 
 Omniverse takes an input directory and an output directory as arguments. Both of
-these directories need to have an `manifest` file in it's root. These files must 
-be named `.alterverse.yml`. The manifest are written in YAML markup and must look
+these directories need to have a `manifest` file in its root. These files must
+be named `.alterverse.yml`. The manifests are written in YAML markup and must look
 similar to this:
 
 ```yaml
@@ -59,7 +79,7 @@ manifest:
   loadbalancer: test.lb.example.com
 ```
 
-An arbitrary file present the source folder with the content of...
+An arbitrary file present in the source folder with the content of...
 
 ```terraform
 resource "aws_lb" "production" {
@@ -116,3 +136,8 @@ To execute the example from the _Configuration_ section run:
 ```
 omniverse deduce --from /tmp/prod --to /tmp/test
 ```
+
+## Further Reading
+
+For a deeper dive into the theory behind text substitution and the edge cases that `omniverse` handles,
+see [IDEA.md](IDEA.md).
